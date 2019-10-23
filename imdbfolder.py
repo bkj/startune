@@ -9,6 +9,8 @@ from pycocotools.coco import COCO
 import os
 import os.path
 
+NUM_WORKERS = 8
+
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
     '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
@@ -146,12 +148,12 @@ def prepare_data_loaders(dataset_names, data_dir, imdb_dir, shuffle_train=True, 
                 transforms.ToTensor(),
                 transforms.Normalize(means, stds),
             ])
-		
+        
         img_path = data_dir
-
-        trainloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_train, None, index, labels_train, imgnames_train), batch_size=128, shuffle=shuffle_train, num_workers=4, pin_memory=True)
-        valloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_test, None, None, labels_val, imgnames_val), batch_size=128, shuffle=False, num_workers=4, pin_memory=True)
-
+        
+        trainloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_train, None, index, labels_train, imgnames_train), batch_size=128, shuffle=shuffle_train, num_workers=NUM_WORKERS, pin_memory=True)
+        valloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_test, None, None, labels_val, imgnames_val), batch_size=128, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
+        
         train_loaders.append(trainloader)
         val_loaders.append(valloader) 
     

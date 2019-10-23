@@ -49,8 +49,8 @@ class conv_task(nn.Module):
     
     def forward(self, x):
         task = config_task.task
-        y = self.conv(x)
-    	'''
+        y    = self.conv(x)
+        '''
             if self.second == 0:
                 if config_task.isdropout1:
                     x = F.dropout2d(x, p=0.5, training = self.training)
@@ -59,15 +59,15 @@ class conv_task(nn.Module):
                     x = F.dropout2d(x, p=0.5, training = self.training)
             if config_task.mode == 'parallel_adapters' and self.is_proj:
                 y = y + self.parallel_conv[task](x)
-    	'''
+        '''
         y = self.bns[task](y)
-
+        
         return y
 
-# No projection: identity shortcut
+
 class BasicBlock(nn.Module):
     expansion = 1
-
+    
     def __init__(self, in_planes, planes, stride=1, shortcut=0, nb_tasks=1):
         super(BasicBlock, self).__init__()
         self.conv1 = conv_task(in_planes, planes, stride, nb_tasks, is_proj=int(config_task.proj[0]))
@@ -83,6 +83,7 @@ class BasicBlock(nn.Module):
         if self.shortcut == 1:
             residual = self.avgpool(x)
             residual = torch.cat((residual, residual*0),1)
+        
         y += residual
         y = F.relu(y)
         return y
@@ -90,14 +91,18 @@ class BasicBlock(nn.Module):
 class ResNet(nn.Module):
     def __init__(self, block, nblocks, num_classes=[10]):
         super(ResNet, self).__init__()
+        
         nb_tasks = len(num_classes)
-        blocks = [block, block, block]
-        factor = config_task.factor
-        self.in_planes = int(32*factor)
+        blocks   = [block, block, block]
+        factor   = config_task.factor
+        
+        self.in_planes       = int(32*factor)
         self.pre_layers_conv = conv_task(3,int(32*factor), 1, nb_tasks) 
-        self.layer1 = self._make_layer(blocks[0], int(64*factor), nblocks[0], stride=2, nb_tasks=nb_tasks)
-        self.layer2 = self._make_layer(blocks[1], int(128*factor), nblocks[1], stride=2, nb_tasks=nb_tasks)
-        self.layer3 = self._make_layer(blocks[2], int(256*factor), nblocks[2], stride=2, nb_tasks=nb_tasks)
+        
+        self.layer1  = self._make_layer(blocks[0], int(64*factor), nblocks[0], stride=2, nb_tasks=nb_tasks)
+        self.layer2  = self._make_layer(blocks[1], int(128*factor), nblocks[1], stride=2, nb_tasks=nb_tasks)
+        self.layer3  = self._make_layer(blocks[2], int(256*factor), nblocks[2], stride=2, nb_tasks=nb_tasks)
+        
         self.end_bns = nn.ModuleList([nn.Sequential(nn.BatchNorm2d(int(256*factor)),nn.ReLU(True)) for i in range(nb_tasks)])
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.linears = nn.ModuleList([nn.Linear(int(256*factor), num_classes[i]) for i in range(nb_tasks)])         
@@ -114,13 +119,15 @@ class ResNet(nn.Module):
         shortcut = 0
         if stride != 1 or self.in_planes != planes * block.expansion:
             shortcut = 1
+        
         layers = []
         layers.append(block(self.in_planes, planes, stride, shortcut, nb_tasks=nb_tasks))
         self.in_planes = planes * block.expansion
         for i in range(1, nblocks):
             layers.append(block(self.in_planes, planes, nb_tasks=nb_tasks))
+        
         return nn.Sequential(*layers)
-
+        
     def forward(self, x):
         x = self.pre_layers_conv(x)
         task = config_task.task

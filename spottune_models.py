@@ -21,15 +21,15 @@ def conv3x3(in_planes, out_planes, stride=1):
 # No projection: identity shortcut
 class BasicBlock(nn.Module):
     expansion = 1
-
+    
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
-
+        
         self.conv1 = conv3x3(in_planes, planes, stride)
-        self.bn1 = nn.BatchNorm2d(planes)
-
+        self.bn1   = nn.BatchNorm2d(planes)
+        
         self.conv2 = nn.Sequential(nn.ReLU(True), conv3x3(planes, planes))
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2   = nn.BatchNorm2d(planes)
 
     def forward(self, x):
         out = self.conv1(x)
@@ -48,9 +48,9 @@ class ResNet(nn.Module):
         factor = 1
         self.in_planes = int(32*factor)
         self.conv1 = conv3x3(3, int(32*factor))
-        self.bn1 = nn.BatchNorm2d(int(32*factor))
-        self.relu = nn.ReLU(inplace=True)
-
+        self.bn1   = nn.BatchNorm2d(int(32*factor))
+        self.relu  = nn.ReLU(inplace=True)
+        
         strides = [2, 2, 2]
         filt_sizes = [64, 128, 256]
         self.blocks, self.ds = [], []
@@ -68,13 +68,14 @@ class ResNet(nn.Module):
             blocks, ds = self._make_layer(block, filt_size, num_blocks, stride=stride)
             self.parallel_blocks.append(nn.ModuleList(blocks))
             self.parallel_ds.append(ds)
+        
         self.parallel_blocks = nn.ModuleList(self.parallel_blocks)
-        self.parallel_ds = nn.ModuleList(self.parallel_ds)
-
-        self.bn2 = nn.Sequential(nn.BatchNorm2d(int(256*factor)), nn.ReLU(True)) 
-        self.avgpool = nn.AdaptiveAvgPool2d(1)        
-        self.linear = nn.Linear(int(256*factor), num_class)
-
+        self.parallel_ds     = nn.ModuleList(self.parallel_ds)
+        
+        self.bn2     = nn.Sequential(nn.BatchNorm2d(int(256*factor)), nn.ReLU(True)) 
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.linear  = nn.Linear(int(256*factor), num_class)
+        
         self.layer_config = layers
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -85,53 +86,54 @@ class ResNet(nn.Module):
                 m.bias.data.zero_()
 
     def seed(self, x):
-        x = self.bn1(self.conv1(x))
-        return x
+        return self.bn1(self.conv1(x))
 
     def _make_layer(self, block, planes, blocks, stride=1):
-
+        
         downsample = nn.Sequential()
         if stride != 1 or self.in_planes != planes * block.expansion:
             downsample = DownsampleB(self.in_planes, planes * block.expansion, 2)
-
+            
         layers = [block(self.in_planes, planes, stride)]
         self.in_planes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.in_planes, planes))
-
+            
         return layers, downsample
-
+        
     def forward(self, x, policy=None):
         t = 0
         x = self.seed(x)
-    
+        
         if policy is not None:
             for segment, num_blocks in enumerate(self.layer_config):
                     for b in range(num_blocks):
-                        action = policy[:,t].contiguous()
+                        action      = policy[:,t].contiguous()
                         action_mask = action.float().view(-1,1,1,1)
-
-                        residual = self.ds[segment](x) if b==0 else x
-                        output = self.blocks[segment][b](x)
-			
-                        residual_ = self.parallel_ds[segment](x) if b==0 else x
-                        output_ = self.parallel_blocks[segment][b](x)
-                        f1 = F.relu(residual + output)
-                        f2 = F.relu(residual_ + output_)
-                        x = f1*(1-action_mask) + f2*action_mask
-                        t += 1   
+                        
+                        residual  = self.ds[segment](x) if b == 0 else x
+                        output    = self.blocks[segment][b](x)
+                        f1        = F.relu(residual + output)
+                        
+                        residual_ = self.parallel_ds[segment](x) if b == 0 else x
+                        output_   = self.parallel_blocks[segment][b](x)
+                        f2        = F.relu(residual_ + output_)
+                        
+                        x         = f1 * (1 - action_mask) + f2 * action_mask
+                        t += 1
         else:
             for segment, num_blocks in enumerate(self.layer_config):
                 for b in range(num_blocks):
                     residual = self.ds[segment](x) if b==0 else x
-                    output = self.blocks[segment][b](x)
+                    output   = self.blocks[segment][b](x)
                     x = F.relu(residual + output)
                     t += 1
-	x = self.bn2(x)
+        
+        x = self.bn2(x)
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         x = self.linear(x)
         return x
 
 def resnet26(num_class=10, blocks=BasicBlock):
-    return  ResNet(blocks, [4,4,4], num_class)
+    return ResNet(blocks, [4,4,4], num_class)
