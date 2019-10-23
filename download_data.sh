@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p $1
 cd $1
 
 wget http://www.robots.ox.ac.uk/~vgg/share/decathlon-1.0-devkit.tar.gz
