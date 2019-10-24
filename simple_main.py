@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    main2.py
+    simple_main.py
 """
 
 import os
