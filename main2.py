@@ -21,7 +21,7 @@ import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 
-import imdbfolder
+from data import prepare_data_loaders
 from models2 import ResNet2, STResNet2
 from utils import *
 from gumbel_softmax import *
@@ -155,7 +155,7 @@ def valid(model, agent, valid_loader):
 
 dataset = list(datasets.keys())[0]
 
-dataloaders  = imdbfolder.prepare_data_loaders(datasets.keys(), args.datadir, shuffle_train=True)
+dataloaders  = prepare_data_loaders(datasets.keys(), args.datadir, shuffle_train=True)
 train_loader = dataloaders[dataset]['train']
 valid_loader = dataloaders[dataset]['valid']
 num_class    = len(train_loader.dataset.classes)
