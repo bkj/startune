@@ -57,9 +57,9 @@ class BasicBlock2(nn.Module):
         return 'BasicBlock2()'
 
 
-class ResNet2(nn.Module):
+class SimpleResNet(nn.Module):
     def __init__(self, width=32, nblocks=[4, 4, 4, 4]):
-        super(ResNet2, self).__init__()
+        super(SimpleResNet, self).__init__()
         
         self.stem = ConvBN(3, width, stride=1)
         
@@ -92,8 +92,8 @@ class ResNet2(nn.Module):
         return x
 
 
-class STResNet2(ResNet2):
-    def __init__(self, model, n_class=100, *args, **kwargs):
+class SimpleStarNet(nn.Module):
+    def __init__(self, model, n_class=100):
         super(STResNet2, self).__init__()
         
         self.stem   = model.stem

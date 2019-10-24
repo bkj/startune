@@ -1,5 +1,14 @@
+#!/usr/bin/env python
+
+"""
+    utils.py
+"""
+
 import os
 import re
+import random
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
@@ -7,6 +16,12 @@ import torchvision.datasets as torchdata
 
 import agent_net 
 from spottune_models import *
+
+def set_seeds(seed):
+    _ = np.random.seed(seed )
+    _ = torch.manual_seed(seed + 111)
+    _ = torch.cuda.manual_seed(seed + 222)
+    _ = random.seed(seed + 333)
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -54,90 +69,90 @@ def adjust_learning_rate_agent(optimizer, epoch, args):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def load_weights_to_flatresnet(source, net, agent,  dataset):
-    checkpoint = torch.load(source)
-    net_old = checkpoint['net']
+# def load_weights_to_flatresnet(source, net, agent,  dataset):
+#     checkpoint = torch.load(source)
+#     net_old = checkpoint['net']
 
-    store_data = []
-    for name, m in net_old.named_modules():
-        if isinstance(m, nn.Conv2d):
-                store_data.append(m.weight.data)
+#     store_data = []
+#     for name, m in net_old.named_modules():
+#         if isinstance(m, nn.Conv2d):
+#                 store_data.append(m.weight.data)
 
-    element = 0
-    for name, m in net.named_modules():
-        if isinstance(m, nn.Conv2d):
-            m.weight.data = torch.nn.Parameter(store_data[element].clone())
-            element += 1
+#     element = 0
+#     for name, m in net.named_modules():
+#         if isinstance(m, nn.Conv2d):
+#             m.weight.data = torch.nn.Parameter(store_data[element].clone())
+#             element += 1
 
-    store_data = []
-    store_data_bias = []
-    store_data_rm = []
-    store_data_rv = []
-    for name, m in net_old.named_modules():
-        if isinstance(m, nn.BatchNorm2d): 
-            store_data.append(m.weight.data)
-            store_data_bias.append(m.bias.data)
-            store_data_rm.append(m.running_mean)
-            store_data_rv.append(m.running_var)
+#     store_data = []
+#     store_data_bias = []
+#     store_data_rm = []
+#     store_data_rv = []
+#     for name, m in net_old.named_modules():
+#         if isinstance(m, nn.BatchNorm2d): 
+#             store_data.append(m.weight.data)
+#             store_data_bias.append(m.bias.data)
+#             store_data_rm.append(m.running_mean)
+#             store_data_rv.append(m.running_var)
 
-    element = 0
-    for name, m in net.named_modules():
-        if isinstance(m, nn.BatchNorm2d):
-                m.weight.data = torch.nn.Parameter(store_data[element].clone())
-                m.bias.data = torch.nn.Parameter(store_data_bias[element].clone())
-                m.running_var = store_data_rv[element].clone()
-                m.running_mean = store_data_rm[element].clone()
-                element += 1
+#     element = 0
+#     for name, m in net.named_modules():
+#         if isinstance(m, nn.BatchNorm2d):
+#                 m.weight.data = torch.nn.Parameter(store_data[element].clone())
+#                 m.bias.data = torch.nn.Parameter(store_data_bias[element].clone())
+#                 m.running_var = store_data_rv[element].clone()
+#                 m.running_mean = store_data_rm[element].clone()
+#                 element += 1
 
-    agent_old = checkpoint['agent']
-    store_data = []
-    for name, m in agent_old.named_modules():
-        if isinstance(m, nn.Conv2d):
-                store_data.append(m.weight.data)
+#     agent_old = checkpoint['agent']
+#     store_data = []
+#     for name, m in agent_old.named_modules():
+#         if isinstance(m, nn.Conv2d):
+#                 store_data.append(m.weight.data)
 
-    element = 0
-    for name, m in agent.named_modules():
-        if isinstance(m, nn.Conv2d):
-            m.weight.data = torch.nn.Parameter(store_data[element].clone())
-            element += 1
+#     element = 0
+#     for name, m in agent.named_modules():
+#         if isinstance(m, nn.Conv2d):
+#             m.weight.data = torch.nn.Parameter(store_data[element].clone())
+#             element += 1
 
-    store_data = []
-    store_data_bias = []
-    store_data_rm = []
-    store_data_rv = []
-    for name, m in agent_old.named_modules():
-        if isinstance(m, nn.BatchNorm2d):
-            store_data.append(m.weight.data)
-            store_data_bias.append(m.bias.data)
-            store_data_rm.append(m.running_mean)
-            store_data_rv.append(m.running_var)
+#     store_data = []
+#     store_data_bias = []
+#     store_data_rm = []
+#     store_data_rv = []
+#     for name, m in agent_old.named_modules():
+#         if isinstance(m, nn.BatchNorm2d):
+#             store_data.append(m.weight.data)
+#             store_data_bias.append(m.bias.data)
+#             store_data_rm.append(m.running_mean)
+#             store_data_rv.append(m.running_var)
 
-    element = 0
-    for name, m in agent.named_modules():
-        if isinstance(m, nn.BatchNorm2d): 
-                m.weight.data = torch.nn.Parameter(store_data[element].clone())
-                m.bias.data = torch.nn.Parameter(store_data_bias[element].clone())
-                m.running_var = store_data_rv[element].clone()
-                m.running_mean = store_data_rm[element].clone()
-                element += 1
+#     element = 0
+#     for name, m in agent.named_modules():
+#         if isinstance(m, nn.BatchNorm2d): 
+#                 m.weight.data = torch.nn.Parameter(store_data[element].clone())
+#                 m.bias.data = torch.nn.Parameter(store_data_bias[element].clone())
+#                 m.running_var = store_data_rv[element].clone()
+#                 m.running_mean = store_data_rm[element].clone()
+#                 element += 1
 
-    agent.linear.weight.data = torch.nn.Parameter(agent_old.linear.weight.data.clone())
-    agent.linear.bias.data = torch.nn.Parameter(agent_old.linear.bias.data.clone())
+#     agent.linear.weight.data = torch.nn.Parameter(agent_old.linear.weight.data.clone())
+#     agent.linear.bias.data = torch.nn.Parameter(agent_old.linear.bias.data.clone())
 
-    net.linear.weight.data = torch.nn.Parameter(net_old.linear.weight.data.clone())
-    net.linear.bias.data = torch.nn.Parameter(net_old.linear.bias.data.clone())
+#     net.linear.weight.data = torch.nn.Parameter(net_old.linear.weight.data.clone())
+#     net.linear.bias.data = torch.nn.Parameter(net_old.linear.bias.data.clone())
 
-    del net_old
-    del agent_old
-    return net, agent
+#     del net_old
+#     del agent_old
+#     return net, agent
 
-def get_net_and_agent(model, num_class, dataset = None):
-    if model == 'resnet26':
-        if dataset is not None:
-            source = '../cv/' + dataset + '/' + dataset + '.t7'
-            rnet = resnet26(num_class)
-            agent = agent_net.resnet(sum(rnet.layer_config))
+# def get_net_and_agent(model, num_class, dataset = None):
+#     if model == 'resnet26':
+#         if dataset is not None:
+#             source = '../cv/' + dataset + '/' + dataset + '.t7'
+#             rnet = resnet26(num_class)
+#             agent = agent_net.resnet(sum(rnet.layer_config))
 
-            rnet, agent = load_weights_to_flatresnet(source, rnet, agent, dataset)
+#             rnet, agent = load_weights_to_flatresnet(source, rnet, agent, dataset)
 
-            return rnet, agent
+#             return rnet, agent

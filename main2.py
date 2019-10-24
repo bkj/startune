@@ -6,37 +6,26 @@
 
 import os
 import sys
-import time
 import json
-import random
 import argparse
 import collections
 import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.autograd import Variable
 import torch.nn.functional as F
-import torchvision
-import torchvision.transforms as transforms
+from torch.autograd import Variable
 
 from data import prepare_data_loaders
-from models2 import ResNet2, STResNet2
-from utils import *
-from gumbel_softmax import *
+from simple_models import SimpleResNet, SimpleStarNet
+
+from gumbel_softmax import gumbel_softmax
+from utils import AverageMeter, adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds
 
 torch.backends.cudnn.deterministic = True
 
 # --
 # Helpers
-
-def set_seeds(seed):
-    _ = np.random.seed(seed )
-    _ = torch.manual_seed(seed + 111)
-    _ = torch.cuda.manual_seed(seed + 222)
-    _ = random.seed(seed + 333)
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch SpotTune')
@@ -175,8 +164,8 @@ _ = agent.cuda()
 model_params = filter(lambda p: p.requires_grad, model.parameters())
 agent_params = agent.parameters()
 
-model_opt = optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[dataset])
-agent_opt = optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight_decay=0.001)
+model_opt = torch.optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[dataset])
+agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight_decay=0.001)
 
 # --
 # Train
