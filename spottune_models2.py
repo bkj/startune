@@ -13,7 +13,7 @@ class DownsampleB(nn.Module):
 
     def forward(self, x):
         residual = self.avg(x)
-        return torch.cat((residual, residual*0),1)
+        return torch.cat((residual, residual *0 ), dim=1)
 
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
@@ -107,12 +107,12 @@ class ResNet(nn.Module):
     def forward(self, x, policy=None):
         t = 0
         x = self.seed(x)
+        
         if policy is not None:
             for segment, num_blocks in enumerate(self.layer_config):
                     for b in range(num_blocks):
                         action = policy[:,t].contiguous()
-                        action = action.double().view(-1,1,1,1)
-                        # print('action', int(action.sum()))
+                        action_mask = action.float().view(-1,1,1,1)
                         
                         residual = self.ds[segment](x) if b==0 else x
                         output   = self.blocks[segment][b](x)
@@ -121,7 +121,7 @@ class ResNet(nn.Module):
                         output_ = self.parallel_blocks[segment][b](x)
                         f1 = F.relu(residual + output)
                         f2 = F.relu(residual_ + output_)
-                        x = f1*(1-action) + f2*action
+                        x = f1*(1-action_mask) + f2*action_mask
                         t += 1   
         else:
             for segment, num_blocks in enumerate(self.layer_config):

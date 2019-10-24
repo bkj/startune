@@ -121,11 +121,11 @@ def load_weights_to_flatresnet(source, net, agent,  dataset):
                 m.running_mean = store_data_rm[element].clone()
                 element += 1
 
-    agent.linear.weight.data = torch.nn.Parameter(agent_old.module.linear.weight.data.clone())
-    agent.linear.bias.data = torch.nn.Parameter(agent_old.module.linear.bias.data.clone())
+    agent.linear.weight.data = torch.nn.Parameter(agent_old.linear.weight.data.clone())
+    agent.linear.bias.data = torch.nn.Parameter(agent_old.linear.bias.data.clone())
 
-    net.linear.weight.data = torch.nn.Parameter(net_old.module.linear.weight.data.clone())
-    net.linear.bias.data = torch.nn.Parameter(net_old.module.linear.bias.data.clone())
+    net.linear.weight.data = torch.nn.Parameter(net_old.linear.weight.data.clone())
+    net.linear.bias.data = torch.nn.Parameter(net_old.linear.bias.data.clone())
 
     del net_old
     del agent_old

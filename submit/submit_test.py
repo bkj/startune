@@ -149,22 +149,21 @@ def prepare_data_loaders(dataset_names, data_dir, imdb_dir, shuffle_train=True, 
 def test(dataset, val_loader, net, agent, task_id):
     net.eval()
     if agent is not None:
-	   agent.eval()
-
-    # Test the model
+        agent.eval()
+        
     with torch.no_grad():
         for idx, (images, image_ids) in enumerate(val_loader):
             if use_cuda:
                 images  = images.cuda(async=True)
-                images  = Variable(images, volatile=True)
-
+                images  = Variable(images)
+                
             probs = agent(images)
             action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
             policy = action[:,:,1]
             outputs = net.forward(images, policy)
-
+            
             _, predicted = torch.max(outputs.data, 1)
-	    
+            
             for image_idx, prediction in enumerate(predicted.data.cpu().numpy()):
                 res_dict = {}
                 res_dict['category_id'] = int(10e6 * (task_id+1) + prediction + 1)
@@ -190,10 +189,10 @@ for dataset in datasets.keys():
         cudnn.benchmark = True
 
     if task_id >= 5:
-	   task_id += 1
-    test(dataset, val_loaders[datasets[dataset]], net, agent, task_id) 
+        task_id += 1
     
-f =  "./results.json"
-with open(f, 'wb') as fh:
-    json.dump(results, fh)     
+    test(dataset, val_loaders[datasets[dataset]], net, agent, task_id) 
+    break
+
+json.dump(results, open("./results.json", 'wb'))
 
