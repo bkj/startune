@@ -242,7 +242,7 @@ criterion = nn.CrossEntropyLoss()
 set_seeds(args.seed)
 
 # <<
-net_0   = load_weights_to_flatresnet('./tmp2.t7', resnet26(num_class))
+net_0 = load_weights_to_flatresnet('./tmp2.t7', resnet26(num_class))
 # --
 
 net = STResNet2(torch.load('tmp2.t7')['net'])

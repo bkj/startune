@@ -30,6 +30,7 @@ class ConvBN(nn.Module):
     def forward(self, x):
         return self.act_fn(self.bn(self.conv(x)))
 
+
 class BasicBlock2(nn.Module):
     def __init__(self, in_channels, out_channels, stride, shortcut):
         super(BasicBlock2, self).__init__()
@@ -55,6 +56,7 @@ class BasicBlock2(nn.Module):
     def __repr__(self):
         return 'BasicBlock2()'
 
+
 class ResNet2(nn.Module):
     def __init__(self, width=32, nblocks=[4, 4, 4, 4]):
         super(ResNet2, self).__init__()
@@ -69,7 +71,7 @@ class ResNet2(nn.Module):
         
         self.head = nn.Sequential(
             nn.BatchNorm2d(8 * width),
-            # nn.ReLU(inplace=True),     # Missing from SpotTune for some reason
+            nn.ReLU(inplace=True),     # Missing from SpotTune for some reason
             nn.AdaptiveAvgPool2d(1),
             Flatten()
         )

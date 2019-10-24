@@ -47,9 +47,9 @@ class ResNet(nn.Module):
 
         factor = 1
         self.in_planes = int(32*factor)
-        self.conv1 = conv3x3(3, int(32*factor))
-        self.bn1 = nn.BatchNorm2d(int(32*factor))
-        self.relu = nn.ReLU(inplace=True)
+        self.conv1     = conv3x3(3, int(32*factor))
+        self.bn1       = nn.BatchNorm2d(int(32*factor))
+        self.relu      = nn.ReLU(inplace=True)
 
         strides = [2, 2, 2]
         filt_sizes = [64, 128, 256]
