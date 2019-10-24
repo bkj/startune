@@ -128,7 +128,7 @@ def train(dataset, poch, train_loader, net, agent, net_optimizer, agent_optimize
         loss.backward()
         
         net_optimizer.step()
-        # agent_optimizer.step()
+        agent_optimizer.step()
         
         print(float(loss))
         if i == 10:
@@ -241,21 +241,43 @@ criterion = nn.CrossEntropyLoss()
 
 set_seeds(args.seed)
 
-# <<
 net_0 = load_weights_to_flatresnet('./tmp2.t7', resnet26(num_class))
-# --
 
-net = STResNet2(torch.load('tmp2.t7')['net'])
-with torch.no_grad():
-    _ = net.linear.bias.set_(net_0.linear.bias.clone())
-    _ = net.linear.weight.set_(net_0.linear.weight.clone())
+new = True
 
-# --
-# net = net_0
+if new:
+    net = STResNet2(torch.load('tmp2.t7')['net'])
+    with torch.no_grad():
+        _ = net.linear.bias.set_(net_0.linear.bias.clone())
+        _ = net.linear.weight.set_(net_0.linear.weight.clone())
+else:
+    net = net_0
 # >>
 
 set_seeds(args.seed)
-agent = agent_net.resnet(24).double()
+
+agent_0 = agent_net.resnet(24).double()
+del agent_0.parallel_blocks
+del agent_0.parallel_ds
+
+if new:
+    agent = nn.Sequential(
+        ResNet2(nblocks=[1, 1, 1]),
+        nn.Linear(256, 24)          # !! I think this is the wrong dimensionality
+    ).double()
+    
+    with torch.no_grad():
+        for a, b in zip(agent_0.parameters(), agent.parameters()):
+            _ = b.set_(a.data.clone())
+
+else:
+    agent = agent_0
+
+
+
+# <<
+
+
 
 _ = net.cuda().double()
 _ = net_0.cuda().double()

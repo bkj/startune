@@ -118,7 +118,7 @@ class STResNet2(ResNet2):
                 for block, fblock in zip(layer, flayer):
                     
                     action = policy[:, offset].contiguous()
-                    action = action.double().view(-1, 1, 1, 1)
+                    action = action.float().view(-1, 1, 1, 1)
                     
                     x = ((1 - action) * fblock(x)) + (action * block(x))
                     offset += 1
