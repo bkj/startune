@@ -14,7 +14,6 @@ import collections
 import numpy as np
 
 import torch
-
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
@@ -22,7 +21,7 @@ import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 
-import imdbfolder2
+import imdbfolder
 from models2 import ResNet2, STResNet2
 from utils import *
 from gumbel_softmax import *
@@ -89,11 +88,8 @@ datasets = [
 datasets      = collections.OrderedDict(datasets)
 weight_decays = collections.OrderedDict(weight_decays)
 
-with open(args.ckpdir + '/weight_decays.json', 'w') as fp:
-    json.dump(weight_decays, fp)
-
-def train(dataset, poch, train_loader, net, agent, net_optimizer, agent_optimizer):
-    _ = net.train()
+def train(model, agent, train_loader, model_opt, agent_opt):
+    _ = model.train()
     _ = agent.train()
     
     tasks_top1   = AverageMeter()
@@ -107,7 +103,7 @@ def train(dataset, poch, train_loader, net, agent, net_optimizer, agent_optimize
         action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
         policy = action[:,:,1]
         
-        outputs = net.forward(images, policy)
+        outputs = model(images, policy)
         _, predicted = torch.max(outputs.data, 1)
         
         correct = predicted.eq(labels.data).cpu().sum()
@@ -117,24 +113,24 @@ def train(dataset, poch, train_loader, net, agent, net_optimizer, agent_optimize
         tasks_losses.update(loss.item(), labels.size(0))
         
         # Step
-        _ = net_optimizer.zero_grad()
-        _ = agent_optimizer.zero_grad()
+        _ = model_opt.zero_grad()
+        _ = agent_opt.zero_grad()
         _ = loss.backward()
-        _ = net_optimizer.step()
-        _ = agent_optimizer.step()
+        _ = model_opt.step()
+        _ = agent_opt.step()
         
     return tasks_top1.avg, tasks_losses.avg
 
 
-def test(epoch, val_loader, net, agent, dataset):
-    _ = net.eval()
+def valid(model, agent, valid_loader):
+    _ = model.eval()
     _ = agent.eval()
     
     tasks_top1   = AverageMeter()
     tasks_losses = AverageMeter()
     
     with torch.no_grad():
-        for i, (images, labels) in enumerate(val_loader):
+        for i, (images, labels) in enumerate(valid_loader):
             images, labels = images.cuda(async=True), labels.cuda(async=True)
             images, labels = Variable(images), Variable(labels)
             
@@ -142,7 +138,7 @@ def test(epoch, val_loader, net, agent, dataset):
             action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
             policy = action[:,:,1]
             
-            outputs = net.forward(images, policy)
+            outputs = model(images, policy)
             _, predicted = torch.max(outputs.data, 1)
             
             correct = predicted.eq(labels.data).cpu().sum()
@@ -154,49 +150,50 @@ def test(epoch, val_loader, net, agent, dataset):
     return tasks_top1.avg, tasks_losses.avg
 
 
+# --
+# Data
+
 dataset = list(datasets.keys())[0]
 
-# >>
-train_loaders, valid_loaders, num_classes = imdbfolder2.prepare_data_loaders(datasets.keys(), args.datadir, args.imdbdir, True)
-train_loader = train_loaders[datasets[dataset]]
-valid_loader = valid_loaders[datasets[dataset]]
-num_class    = num_classes[datasets[dataset]]
-# --
-# !! This should be the same, but I think order is slightly different
-# dataloaders = \
-#     imdbfolder.prepare_data_loaders(datasets.keys(), args.datadir, shuffle_train=True)
-# train_loader = dataloaders[dataset]['valid']
-# valid_loader = dataloaders[dataset]['valid']
-# num_class    = len(train_loader.dataset.classes)
-# <<
+dataloaders  = imdbfolder.prepare_data_loaders(datasets.keys(), args.datadir, shuffle_train=True)
+train_loader = dataloaders[dataset]['train']
+valid_loader = dataloaders[dataset]['valid']
+num_class    = len(train_loader.dataset.classes)
 
-net   = STResNet2(torch.load('tmp2.t7')['net'])
+# --
+# Models
+
+model = STResNet2(torch.load('tmp2.t7')['net'])
 agent = nn.Sequential(
     ResNet2(nblocks=[1, 1, 1]),
-    nn.Linear(256, 24)          # !! I think this is the wrong dimensionality
+    nn.Linear(256, 24)          # !! I think this is twice the necessary dim
 )
 
-_ = net.cuda()
+_ = model.cuda()
 _ = agent.cuda()
 
-net_params   = filter(lambda p: p.requires_grad, net.parameters())
+model_params = filter(lambda p: p.requires_grad, model.parameters())
 agent_params = agent.parameters()
 
-net_optimizer   = optim.SGD(net_params, lr= args.lr, momentum=0.9, weight_decay=weight_decays[dataset])
-agent_optimizer = optim.SGD(agent_params, lr= args.lr_agent, momentum= 0.9, weight_decay= 0.001)
+model_opt = optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[dataset])
+agent_opt = optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight_decay=0.001)
+
+# --
+# Train
 
 for epoch in range(args.nb_epochs):
-    adjust_learning_rate_net(net_optimizer, epoch, args)
-    adjust_learning_rate_agent(agent_optimizer, epoch, args)
+    adjust_learning_rate_net(model_opt, epoch, args)
+    adjust_learning_rate_agent(agent_opt, epoch, args)
     
-    train_acc, train_loss = train(dataset, epoch, train_loader, net, agent, net_optimizer, agent_optimizer)
-    test_acc, test_loss   = test(epoch, valid_loader, net, agent, dataset)
+    train_acc, train_loss = train(model, agent, train_loader, model_opt, agent_opt)
+    valid_acc, valid_loss = valid(model, agent, valid_loader)
     
     print(json.dumps({
         "dataset"    : dataset,
+        "epoch"      : epoch,
         "train_acc"  : float(train_acc),
         "train_loss" : float(train_loss),
-        "test_acc"   : float(test_acc),
-        "test_loss"  : float(test_loss),
+        "valid_acc"  : float(valid_acc),
+        "valid_loss" : float(valid_loss),
     }))
     sys.stdout.flush()

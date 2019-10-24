@@ -17,6 +17,8 @@ IMG_EXTENSIONS = [
 def pil_loader(path):
     return Image.open(path).convert('RGB')
 
+NUM_WORKERS = 0
+
 class ImageFolder(data.Dataset):
 
     def __init__(self, root, transform=None, target_transform=None, index=None,
@@ -154,8 +156,8 @@ def prepare_data_loaders(dataset_names, data_dir, imdb_dir, shuffle_train=True, 
         
         img_path = data_dir
 
-        trainloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_train, None, index, labels_train, imgnames_train), batch_size=128, shuffle=shuffle_train, num_workers=4, pin_memory=True)
-        valloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_test, None, None, labels_val, imgnames_val), batch_size=128, shuffle=False, num_workers=4, pin_memory=True)
+        trainloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_train, None, index, labels_train, imgnames_train), batch_size=128, shuffle=shuffle_train, num_workers=NUM_WORKERS, pin_memory=True)
+        valloader = torch.utils.data.DataLoader(ImageFolder(data_dir, transform_test, None, None, labels_val, imgnames_val), batch_size=128, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
 
         train_loaders.append(trainloader)
         val_loaders.append(valloader) 
