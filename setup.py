@@ -2,6 +2,8 @@
 
 from setuptools import setup, find_packages
 
+VERSION = 0.1
+
 setup(
     name='exline',
     author='Ben Johnson',
