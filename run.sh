@@ -5,21 +5,20 @@
 # --
 # Install
 
-conda create -n spottune_env python=2.7 pip -y
-conda activate spottune_env
+conda create -n spottune3_env python=3.7 pip -y
+conda activate spottune3_env
 
-conda install -y -c pytorch pytorch==0.4.1
+conda install -y -c pytorch pytorch==1.2.0
 conda install -y -c pytorch torchvision
-conda install -y -c conda-forge pycocotools
 
 pip install tqdm
 
-# --
-# Download pretrained model
+# # --
+# # Download pretrained model
 
-mkdir -p models
-wget 'https://drive.google.com/uc?export=download&id=1fiFyfb9f3PqVI4q26tp4bP9yNOFXS1KG' \
-    -O models/resnet26
+# mkdir -p models
+# wget 'https://drive.google.com/uc?export=download&id=1fiFyfb9f3PqVI4q26tp4bP9yNOFXS1KG' \
+#     -O models/resnet26
 
 # --
 # Download data

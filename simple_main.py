@@ -15,13 +15,12 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from data import get_data
 from simple_models import SimpleResNet, SimpleStarNet
 
 from gumbel_softmax import gumbel_softmax
-from utils import AverageMeter, adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds
+from utils import adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds
 
 torch.backends.cudnn.deterministic = True
 
@@ -74,8 +73,7 @@ def train(model, agent, loader, model_opt, agent_opt):
     total_seen, total_loss, total_correct = 0, 0, 0
     
     for i, (x, y) in tqdm(enumerate(loader), total=len(loader)):
-        x, y = x.cuda(async=True), y.cuda(async=True)
-        x, y = Variable(x), Variable(y)
+        x, y = x.cuda(), y.cuda()
         
         probs  = agent(x)
         action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
@@ -99,8 +97,8 @@ def train(model, agent, loader, model_opt, agent_opt):
         _ = model_opt.step()
         _ = agent_opt.step()
         
-    acc  = float(total_correct) / total_seen
-    loss = float(total_loss) / total_seen
+    acc  = total_correct / total_seen
+    loss = total_loss / total_seen
     
     return acc, loss
 
@@ -113,8 +111,7 @@ def valid(model, agent, loader):
     
     with torch.no_grad():
         for i, (x, y) in enumerate(tqdm(loader, total=len(loader))):
-            x, y = x.cuda(async=True), y.cuda(async=True)
-            x, y = Variable(x), Variable(y)
+            x, y = x.cuda(), y.cuda()
             
             probs  = agent(x)
             action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
@@ -130,8 +127,8 @@ def valid(model, agent, loader):
             total_loss    += float(loss.item())
             total_correct += int(correct)
     
-    acc  = float(total_correct) / total_seen
-    loss = float(total_loss) / total_seen
+    acc  = total_correct / total_seen
+    loss = total_loss / total_seen
     
     return acc, loss
 
