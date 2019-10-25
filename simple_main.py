@@ -10,6 +10,7 @@ import json
 import argparse
 import collections
 import numpy as np
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -66,29 +67,30 @@ def parse_args():
 args = parse_args()
 set_seeds(args.seed)
 
-def train(model, agent, train_loader, model_opt, agent_opt):
+def train(model, agent, loader, model_opt, agent_opt):
     _ = model.train()
     _ = agent.train()
     
-    tasks_top1   = AverageMeter()
-    tasks_losses = AverageMeter()
+    total_seen, total_loss, total_correct = 0, 0, 0
     
-    for i, (images, labels) in enumerate(train_loader):
-        images, labels = images.cuda(async=True), labels.cuda(async=True)
-        images, labels = Variable(images), Variable(labels)
+    for i, (x, y) in tqdm(enumerate(loader), total=len(loader)):
+        x, y = x.cuda(async=True), y.cuda(async=True)
+        x, y = Variable(x), Variable(y)
         
-        probs  = agent(images)
+        probs  = agent(x)
         action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
         policy = action[:,:,1]
         
-        outputs = model(images, policy)
-        _, predicted = torch.max(outputs.data, 1)
+        out  = model(x, policy)
+        loss = F.cross_entropy(out, y)
         
-        correct = predicted.eq(labels.data).cpu().sum()
-        tasks_top1.update(correct.item()*100 / (labels.size(0)+0.0), labels.size(0))
+        _, predicted = torch.max(out.data, 1)
         
-        loss = F.cross_entropy(outputs, labels)
-        tasks_losses.update(loss.item(), labels.size(0))
+        correct = predicted.eq(y.data).cpu().sum()
+        
+        total_seen    += int(y.shape[0])
+        total_loss    += float(loss.item())
+        total_correct += int(correct)
         
         # Step
         _ = model_opt.zero_grad()
@@ -97,36 +99,41 @@ def train(model, agent, train_loader, model_opt, agent_opt):
         _ = model_opt.step()
         _ = agent_opt.step()
         
-    return tasks_top1.avg, tasks_losses.avg
+    acc  = float(total_correct) / total_seen
+    loss = float(total_loss) / total_seen
+    
+    return acc, loss
 
 
-def valid(model, agent, valid_loader):
+def valid(model, agent, loader):
     _ = model.eval()
     _ = agent.eval()
     
-    tasks_top1   = AverageMeter()
-    tasks_losses = AverageMeter()
+    total_seen, total_loss, total_correct = 0, 0, 0
     
     with torch.no_grad():
-        for i, (images, labels) in enumerate(valid_loader):
-            images, labels = images.cuda(async=True), labels.cuda(async=True)
-            images, labels = Variable(images), Variable(labels)
+        for i, (x, y) in enumerate(tqdm(loader, total=len(loader))):
+            x, y = x.cuda(async=True), y.cuda(async=True)
+            x, y = Variable(x), Variable(y)
             
-            probs  = agent(images)
+            probs  = agent(x)
             action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
             policy = action[:,:,1]
             
-            outputs = model(images, policy)
-            _, predicted = torch.max(outputs.data, 1)
+            out  = model(x, policy)
+            loss = F.cross_entropy(out, y)
             
-            correct = predicted.eq(labels.data).cpu().sum()
-            tasks_top1.update(correct.item()*100 / (labels.size(0)+0.0), labels.size(0))
+            _, predicted = torch.max(out.data, 1)
+            correct = predicted.eq(y.data).cpu().sum()
             
-            loss = F.cross_entropy(outputs, labels)
-            tasks_losses.update(loss.item(), labels.size(0))
-            
-    return tasks_top1.avg, tasks_losses.avg
-
+            total_seen    += int(y.shape[0])
+            total_loss    += float(loss.item())
+            total_correct += int(correct)
+    
+    acc  = float(total_correct) / total_seen
+    loss = float(total_loss) / total_seen
+    
+    return acc, loss
 
 # --
 # Data

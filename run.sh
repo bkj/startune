@@ -12,6 +12,8 @@ conda install -y -c pytorch pytorch==0.4.1
 conda install -y -c pytorch torchvision
 conda install -y -c conda-forge pycocotools
 
+pip install tqdm
+
 # --
 # Download pretrained model
 
