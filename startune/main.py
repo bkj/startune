@@ -16,11 +16,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from data import get_data
-from simple_models import SimpleResNet, SimpleStarNet
+from .data import get_data
+from .models import SimpleResNet, SimpleStarNet
 
-from gumbel_softmax import gumbel_softmax
-from utils import adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds
+from .utils import (
+    adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds, gumbel_softmax
+)
 
 torch.backends.cudnn.deterministic = True
 

@@ -3,3 +3,6 @@ data/*
 cv/*
 *.pyc
 *.json
+__pycache__
+results/*
+models/*

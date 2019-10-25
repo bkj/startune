@@ -9,6 +9,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 def set_seeds(seed):
     _ = np.random.seed(seed )
@@ -45,3 +46,22 @@ def adjust_learning_rate_agent(optimizer, epoch, args):
         
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
+
+def sample_gumbel(shape, eps=1e-20):
+    U = torch.cuda.FloatTensor(shape).uniform_()
+    return -1 * torch.log(-torch.log(U + eps) + eps)
+
+def gumbel_softmax_sample(logits, temperature):
+    y = logits + sample_gumbel(logits.size())
+    return F.softmax(y / temperature, dim=-1)
+
+def gumbel_softmax(logits, temperature=5):
+    y      = gumbel_softmax_sample(logits, temperature)
+    
+    shape  = y.size()
+    _, ind = y.max(dim=-1)
+    y_hard = torch.zeros_like(y).view(-1, shape[-1])
+    y_hard.scatter_(1, ind.view(-1, 1), 1)
+    y_hard = y_hard.view(*shape)
+    return (y_hard - y).detach() + y
