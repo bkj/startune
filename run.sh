@@ -29,5 +29,6 @@ wget https://github.com/srebuffi/residual_adapters/blob/master/decathlon_mean_st
 # --
 # Run
 
-mkdir -p cv
-python main.py
+mkdir -p results
+CUDA_VISIBLE_DEVICES=6 python simple_main.py --dataset aircraft --train-on-valid | tee results/aircraft.jl
+CUDA_VISIBLE_DEVICES=6 python simple_main.py --dataset cifar100 --train-on-valid | tee results/cifar100.jl

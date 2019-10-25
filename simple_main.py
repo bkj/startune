@@ -16,7 +16,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from data import prepare_data_loaders
+from data import get_data
 from simple_models import SimpleResNet, SimpleStarNet
 
 from gumbel_softmax import gumbel_softmax
@@ -27,19 +27,36 @@ torch.backends.cudnn.deterministic = True
 # --
 # Helpers
 
+weight_decays = {
+    "aircraft"      : 0.0005,
+    "cifar100"      : 0.0,
+    "daimlerpedcls" : 0.0005,
+    "dtd"           : 0.0,
+    "gtsrb"         : 0.0,
+    "omniglot"      : 0.0005,
+    "svhn"          : 0.0,
+    "ucf101"        : 0.0005,
+    "vgg-flowers"   : 0.0001,
+    "imagenet12"    : 0.0001,
+}
+
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch SpotTune')
     
-    parser.add_argument('--inpath', default='./data/decathlon-1.0/', help='folder containing data folder')
-    parser.add_argument('--outpath', type=str, default='model')
+    parser.add_argument('--inpath',     type=str, default='./data/decathlon-1.0/')
+    parser.add_argument('--outpath',    type=str, default='model')
+    parser.add_argument('--model-path', type=str, default='models/SimpleResNet.t7')
+    parser.add_argument('--dataset',    type=str, default='aircraft')
     
-    parser.add_argument('--nb_epochs', type=int,   default=110)
-    parser.add_argument('--lr',        type=float, default=0.1)
-    parser.add_argument('--lr-agent',  type=float, default=0.01)
+    parser.add_argument('--epochs',   type=int,   default=110)
+    parser.add_argument('--lr',       type=float, default=0.1)
+    parser.add_argument('--lr-agent', type=float, default=0.01)
     
-    parser.add_argument('--step1', default=40, type=int, help='nb epochs before first lr decrease')
-    parser.add_argument('--step2', default=60, type=int, help='nb epochs before second lr decrease')
-    parser.add_argument('--step3', default=80, type=int, help='nb epochs before third lr decrease')
+    parser.add_argument('--train-on-valid', action="store_true")
+    
+    parser.add_argument('--step1', default=40, type=int, help='epochs before first lr decrease')
+    parser.add_argument('--step2', default=60, type=int, help='epochs before second lr decrease')
+    parser.add_argument('--step3', default=80, type=int, help='epochs before third lr decrease')
     
     parser.add_argument('--seed', default=123, type=int, help='seed')
     
@@ -48,34 +65,6 @@ def parse_args():
 
 args = parse_args()
 set_seeds(args.seed)
-
-weight_decays = [
-    ("aircraft", 0.0005),
-    # ("cifar100", 0.0),
-    # ("daimlerpedcls", 0.0005),
-    # ("dtd", 0.0),
-    # ("gtsrb", 0.0),
-    # ("omniglot", 0.0005),
-    # ("svhn", 0.0),
-    # ("ucf101", 0.0005),
-    # ("vgg-flowers", 0.0001),
-    # ("imagenet12", 0.0001)
-]
-
-datasets = [
-    ("aircraft", 0),
-    # ("cifar100", 1),
-    # ("daimlerpedcls", 2),
-    # ("dtd", 3),
-    # ("gtsrb", 4),
-    # ("omniglot", 5),
-    # ("svhn", 6),
-    # ("ucf101", 7),
-    # ("vgg-flowers", 8)
-]
-
-datasets      = collections.OrderedDict(datasets)
-weight_decays = collections.OrderedDict(weight_decays)
 
 def train(model, agent, train_loader, model_opt, agent_opt):
     _ = model.train()
@@ -142,20 +131,18 @@ def valid(model, agent, valid_loader):
 # --
 # Data
 
-dataset = list(datasets.keys())[0]
+train_loader, valid_loader = get_data(
+    root=args.inpath, dataset=args.dataset, shuffle_train=True, train_on_valid=args.train_on_valid)
 
-dataloaders  = prepare_data_loaders(datasets.keys(), args.inpath, shuffle_train=True)
-train_loader = dataloaders[dataset]['train']
-valid_loader = dataloaders[dataset]['valid']
-num_class    = len(train_loader.dataset.classes)
+num_class = len(train_loader.dataset.classes)
 
 # --
 # Models
 
-model = SimpleStarNet(torch.load('models/SimpleResNet.t7')['net'])
+model = SimpleStarNet(torch.load(args.model_path)['net'])
 agent = nn.Sequential(
     SimpleResNet(nblocks=[1, 1, 1]),
-    nn.Linear(256, 24)          # !! I think this is twice the necessary dim
+    nn.Linear(256, 24)               # !! I think this is twice the necessary dim
 )
 
 _ = model.cuda()
@@ -164,7 +151,7 @@ _ = agent.cuda()
 model_params = filter(lambda p: p.requires_grad, model.parameters())
 agent_params = agent.parameters()
 
-model_opt = torch.optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[dataset])
+model_opt = torch.optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[args.dataset])
 agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight_decay=0.001)
 
 # --
@@ -172,7 +159,7 @@ agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight
 
 torch.save(model, args.outpath)
 
-for epoch in range(args.nb_epochs):
+for epoch in range(args.epochs):
     adjust_learning_rate_net(model_opt, epoch, args)
     adjust_learning_rate_agent(agent_opt, epoch, args)
     
@@ -180,7 +167,7 @@ for epoch in range(args.nb_epochs):
     valid_acc, valid_loss = valid(model, agent, valid_loader)
     
     print(json.dumps({
-        "dataset"    : dataset,
+        "dataset"    : args.dataset,
         "epoch"      : epoch,
         "train_acc"  : float(train_acc),
         "train_loss" : float(train_loss),
