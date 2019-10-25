@@ -60,7 +60,7 @@ def adjust_learning_rate_agent(optimizer, epoch, args):
     if epoch >= args.step3:
         lr = args.lr_agent * 0.001
     if epoch >= args.step2:
-        lr = args.lr_agent * 0.01        
+        lr = args.lr_agent * 0.01
     if epoch >= args.step1:
         lr = args.lr_agent * 0.1
     else:

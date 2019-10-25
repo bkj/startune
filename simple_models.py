@@ -94,7 +94,7 @@ class SimpleResNet(nn.Module):
 
 class SimpleStarNet(nn.Module):
     def __init__(self, model, n_class=100):
-        super(STResNet2, self).__init__()
+        super(SimpleStarNet, self).__init__()
         
         self.stem   = model.stem
         self.trunk  = model.trunk

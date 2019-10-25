@@ -6,10 +6,9 @@
 
 import torch
 from torch import nn
-from models2 import ResNet2
+from simple_models import SimpleResNet
 
-import sys
-sys.path.append('dep')
+import sys; sys.path.append('dep')
 
 # --
 # Helpers
@@ -35,7 +34,7 @@ def assign_modules(old_modules, new_modules):
 
 source  = 'resnet26_pretrained.t7'
 net_old = torch.load(source)['net']
-net_new = ResNet2()
+net_new = SimpleResNet()
 
 net_old = net_old.cpu().eval()
 net_new = net_new.cpu().eval()
@@ -51,8 +50,8 @@ old_bn   = [m for m in net_old.modules() if isinstance(m, nn.BatchNorm2d)]
 new_bn   = [m for m in net_new.modules() if isinstance(m, nn.BatchNorm2d)]
 assign_modules(old_bn, new_bn)
 
-# # --
-# # Test
+# --
+# Test
 
 # net     = net.eval()
 # x = torch.randn(16, 3, 64, 64) / 100
@@ -68,4 +67,4 @@ assign_modules(old_bn, new_bn)
 # b = net(x)
 # (a == b).all()
 
-torch.save({'net' : net_new}, 'tmp2.t7')
+torch.save({'net' : net_new}, 'models/SimpleResNet.t7')

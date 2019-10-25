@@ -30,21 +30,21 @@ torch.backends.cudnn.deterministic = True
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch SpotTune')
     
-    parser.add_argument('--nb_epochs', default=110, type=int, help='nb epochs')
-    parser.add_argument('--lr', default=0.1, type=float, help='initial learning rate of net')
-    parser.add_argument('--lr_agent', default=0.01, type=float, help='initial learning rate of agent')
+    parser.add_argument('--inpath', default='./data/decathlon-1.0/', help='folder containing data folder')
+    parser.add_argument('--outpath', type=str, default='model')
     
-    parser.add_argument('--datadir', default='./data/decathlon-1.0/', help='folder containing data folder')
-    parser.add_argument('--imdbdir', default='./data/decathlon-1.0/annotations/', help='annotation folder')
-    parser.add_argument('--ckpdir', default='./cv/', help='folder saving checkpoint')
-    
-    parser.add_argument('--seed', default=0, type=int, help='seed')
+    parser.add_argument('--nb_epochs', type=int,   default=110)
+    parser.add_argument('--lr',        type=float, default=0.1)
+    parser.add_argument('--lr-agent',  type=float, default=0.01)
     
     parser.add_argument('--step1', default=40, type=int, help='nb epochs before first lr decrease')
     parser.add_argument('--step2', default=60, type=int, help='nb epochs before second lr decrease')
     parser.add_argument('--step3', default=80, type=int, help='nb epochs before third lr decrease')
     
+    parser.add_argument('--seed', default=123, type=int, help='seed')
+    
     return parser.parse_args()
+
 
 args = parse_args()
 set_seeds(args.seed)
@@ -144,7 +144,7 @@ def valid(model, agent, valid_loader):
 
 dataset = list(datasets.keys())[0]
 
-dataloaders  = prepare_data_loaders(datasets.keys(), args.datadir, shuffle_train=True)
+dataloaders  = prepare_data_loaders(datasets.keys(), args.inpath, shuffle_train=True)
 train_loader = dataloaders[dataset]['train']
 valid_loader = dataloaders[dataset]['valid']
 num_class    = len(train_loader.dataset.classes)
@@ -152,9 +152,9 @@ num_class    = len(train_loader.dataset.classes)
 # --
 # Models
 
-model = STResNet2(torch.load('tmp2.t7')['net'])
+model = SimpleStarNet(torch.load('models/SimpleResNet.t7')['net'])
 agent = nn.Sequential(
-    ResNet2(nblocks=[1, 1, 1]),
+    SimpleResNet(nblocks=[1, 1, 1]),
     nn.Linear(256, 24)          # !! I think this is twice the necessary dim
 )
 
@@ -169,6 +169,8 @@ agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight
 
 # --
 # Train
+
+torch.save(model, args.outpath)
 
 for epoch in range(args.nb_epochs):
     adjust_learning_rate_net(model_opt, epoch, args)
@@ -186,3 +188,5 @@ for epoch in range(args.nb_epochs):
         "valid_loss" : float(valid_loss),
     }))
     sys.stdout.flush()
+
+torch.save(model, args.outpath)
