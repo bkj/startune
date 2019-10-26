@@ -57,7 +57,7 @@ def get_transform(dataset, means, stds):
 
 def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size=128, num_workers=8):
     
-    dict_mean_std = pickle.load(open(root + 'decathlon_mean_std.pickle'))
+    dict_mean_std = pickle.load(open(root + 'decathlon_mean_std.pickle', 'rb'), encoding='latin1')
         
     transform_train, transform_valid = get_transform(
         dataset = dataset, 
@@ -65,17 +65,18 @@ def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size
         stds    = dict_mean_std[dataset + 'std'],
     )
     
-    valid_dataset = ImageFolder(
-        root      = os.path.join(root, 'data', dataset, 'val'),
-        transform = transform_valid
-    )
-    train_dataset = ImageFolder(
-        root      = os.path.join(root, 'data', dataset, 'train'),
-        transform = transform_train
-    )
+    valid_path = os.path.join(root, 'data', dataset, 'val')
+    train_path = os.path.join(root, 'data', dataset, 'train')
+    
+    valid_dataset = ImageFolder(root=valid_path, transform=transform_valid)
     
     if train_on_valid:
-        train_dataset = ConcatDataset([train_dataset, valid_dataset])
+        train_dataset = ConcatDataset([
+            ImageFolder(root=train_path, transform=transform_train),
+            ImageFolder(root=valid_path, transform=transform_train),
+        ])
+    else:
+        train_dataset = ImageFolder(root=train_path, transform=transform_train)
     
     train_loader = DataLoader(
         train_dataset,

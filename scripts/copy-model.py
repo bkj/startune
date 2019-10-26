@@ -6,7 +6,8 @@
 
 import torch
 from torch import nn
-from simple_models import SimpleResNet
+from startune.models import SimpleResNet
+from startune.dep.models import ResNet, config_task
 
 import sys; sys.path.append('dep')
 
@@ -22,18 +23,18 @@ def assign_modules(old_modules, new_modules):
                 assert hasattr(new, param_name)
                 new_param = getattr(new, param_name)
                 assert new_param.shape == old_param.shape
-                new_param.data.set_(old_param.data.clone())
+                new_param.set_(old_param.clone())
             
             if type(old) in [nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]:
-                new.running_mean.data.set_(old.running_mean.clone())
-                new.running_var.data.set_(old.running_var.clone())
+                new.running_mean.set_(old.running_mean.clone())
+                new.running_var.set_(old.running_var.clone())
 
 
 # --
 # Run
 
-source  = 'resnet26_pretrained.t7'
-net_old = torch.load(source)['net']
+source  = 'models/resnet26_pretrained.t7'
+net_old = torch.load(source, encoding='latin1')['net']
 net_new = SimpleResNet()
 
 net_old = net_old.cpu().eval()

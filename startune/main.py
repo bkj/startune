@@ -16,10 +16,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .data import get_data
-from .models import SimpleResNet, SimpleStarNet
+from startune.data import get_data
+from startune.models import SimpleResNet, SimpleStarNet
 
-from .utils import (
+from startune.utils import (
     adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds, gumbel_softmax
 )
 
@@ -77,19 +77,18 @@ def train(model, agent, loader, model_opt, agent_opt):
         x, y = x.cuda(), y.cuda()
         
         probs  = agent(x)
-        action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
+        action = gumbel_softmax(probs.view(probs.shape[0], -1, 2))
         policy = action[:,:,1]
         
         out  = model(x, policy)
         loss = F.cross_entropy(out, y)
         
-        _, predicted = torch.max(out.data, 1)
-        
-        correct = predicted.eq(y.data).cpu().sum()
+        preds   = torch.argmax(out.data, dim=-1)
+        correct = int((preds == y).sum())
         
         total_seen    += int(y.shape[0])
-        total_loss    += float(loss.item())
-        total_correct += int(correct)
+        total_loss    += float(loss)
+        total_correct += correct
         
         # Step
         _ = model_opt.zero_grad()
@@ -115,18 +114,18 @@ def valid(model, agent, loader):
             x, y = x.cuda(), y.cuda()
             
             probs  = agent(x)
-            action = gumbel_softmax(probs.view(probs.size(0), -1, 2))
+            action = gumbel_softmax(probs.view(probs.shape[0], -1, 2))
             policy = action[:,:,1]
             
             out  = model(x, policy)
             loss = F.cross_entropy(out, y)
             
-            _, predicted = torch.max(out.data, 1)
-            correct = predicted.eq(y.data).cpu().sum()
+            preds   = torch.argmax(out.data, dim=-1)
+            correct = int((preds == y).sum())
             
             total_seen    += int(y.shape[0])
-            total_loss    += float(loss.item())
-            total_correct += int(correct)
+            total_loss    += float(loss)
+            total_correct += correct
     
     acc  = total_correct / total_seen
     loss = total_loss / total_seen
@@ -137,17 +136,22 @@ def valid(model, agent, loader):
 # Data
 
 train_loader, valid_loader = get_data(
-    root=args.inpath, dataset=args.dataset, shuffle_train=True, train_on_valid=args.train_on_valid)
+    root=args.inpath,
+    dataset=args.dataset,
+    shuffle_train=True,
+    train_on_valid=args.train_on_valid
+)
 
-num_class = len(train_loader.dataset.classes)
+n_class = len(valid_loader.dataset.classes)
 
 # --
 # Models
 
-model = SimpleStarNet(torch.load(args.model_path)['net'])
+model = SimpleStarNet(model=torch.load(args.model_path)['net'], n_class=n_class)
+
 agent = nn.Sequential(
     SimpleResNet(nblocks=[1, 1, 1]),
-    nn.Linear(256, 24)               # !! I think this is twice the necessary dim
+    nn.Linear(model.out_channels, 24) # !! I think this could be 12 instead of 24
 )
 
 _ = model.cuda()

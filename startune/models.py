@@ -13,7 +13,7 @@ class Flatten(nn.Module):
 
 class ConvBN(nn.Module):
     def __init__(self, in_channels, out_channels, stride, act_fn=Identity()):
-        super(ConvBN, self).__init__()
+        super().__init__()
         
         self.conv = nn.Conv2d(
             in_channels,
@@ -31,9 +31,9 @@ class ConvBN(nn.Module):
         return self.act_fn(self.bn(self.conv(x)))
 
 
-class BasicBlock2(nn.Module):
+class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride, shortcut):
-        super(BasicBlock2, self).__init__()
+        super().__init__()
         
         self.conv = nn.Sequential(
             ConvBN(in_channels, out_channels, stride=stride, act_fn=F.relu),
@@ -54,12 +54,12 @@ class BasicBlock2(nn.Module):
         return F.relu(out + x)
     
     def __repr__(self):
-        return 'BasicBlock2()'
+        return 'BasicBlock()'
 
 
 class SimpleResNet(nn.Module):
     def __init__(self, width=32, nblocks=[4, 4, 4, 4]):
-        super(SimpleResNet, self).__init__()
+        super().__init__()
         
         self.stem = ConvBN(3, width, stride=1)
         
@@ -75,12 +75,14 @@ class SimpleResNet(nn.Module):
             nn.AdaptiveAvgPool2d(1),
             Flatten()
         )
+        
+        self.out_channels = 8 * width
     
     def _make_layer(self, in_channels, out_channels, nblocks):
         layers = [
-            BasicBlock2(in_channels, out_channels, stride=2, shortcut=True)
+            BasicBlock(in_channels, out_channels, stride=2, shortcut=True)
         ] + [
-            BasicBlock2(out_channels, out_channels, stride=1, shortcut=False) for _ in range(nblocks - 1)
+            BasicBlock(out_channels, out_channels, stride=1, shortcut=False) for _ in range(nblocks - 1)
         ]
         
         return nn.Sequential(*layers)
@@ -93,8 +95,8 @@ class SimpleResNet(nn.Module):
 
 
 class SimpleStarNet(nn.Module):
-    def __init__(self, model, n_class=100):
-        super(SimpleStarNet, self).__init__()
+    def __init__(self, model, n_class):
+        super().__init__()
         
         self.stem   = model.stem
         self.trunk  = model.trunk
@@ -105,6 +107,8 @@ class SimpleStarNet(nn.Module):
         for m in self.ftrunk.modules():
             if isinstance(m, nn.Conv2d):
                 m.weight.requires_grad = False
+        
+        self.out_channels = model.out_channels
     
     def forward(self, x, policy=None):
         trunk  = list(self.trunk)

@@ -13,6 +13,8 @@ conda install -y -c pytorch torchvision
 
 pip install tqdm
 
+pip install -e .
+
 # # --
 # # Download pretrained model
 
@@ -28,8 +30,21 @@ wget https://github.com/srebuffi/residual_adapters/blob/master/decathlon_mean_st
     -O data/decathlon-1.0/decathlon_mean_std.pickle
 
 # --
+# Export model
+
+cp startune/dep/{models.py,config_task.py} ./
+python scripts/copy-model.py
+rm models.py config_task.py
+
+# --
 # Run
 
 mkdir -p results
-CUDA_VISIBLE_DEVICES=6 python simple_main.py --dataset aircraft --train-on-valid | tee results/aircraft.jl
-CUDA_VISIBLE_DEVICES=6 python simple_main.py --dataset cifar100 --train-on-valid | tee results/cifar100.jl
+mkdir -p models
+
+for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers imagenet12; do
+    CUDA_VISIBLE_DEVICES=6 python -m startune.main \
+        --dataset $dataset                         \
+        --outpath models/$dataset.pth              \
+        --train-on-valid | tee results/$dataset.jl
+done
