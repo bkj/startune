@@ -53,10 +53,10 @@ done
 
 mkdir -p predictions
 
-python -m startune.predict --dataset aircraft > predictions/aircraft.jl
+python -m startune.predict --dataset aircraft --mode test > predictions/aircraft.test.jl
+python -m startune.predict --dataset aircraft --mode valid > predictions/aircraft.valid.jl
 
-cat predictions/* | jq --slurp '.' > results.json
-python -m startune.collate_predictions 
+cat predictions/aircraft.valid.jl | jq --slurp '.' > results.json
 
 # --
 # Regression testing

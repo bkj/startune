@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 """
-    simple_main.py
+    startune/predict.py
+    
+    (Ugly) code to make leaderboard predictions
 """
 
 import os
@@ -10,6 +12,7 @@ import json
 import argparse
 import collections
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 import torch
@@ -27,6 +30,30 @@ torch.backends.cudnn.deterministic = True
 
 # --
 # Helpers
+
+def path_tail(p, k=1):
+    return '/'.join(p.split('/')[-k:])
+
+def get_dir(a):
+    p = a['file_name']
+    return os.path.basename(os.path.dirname(p))
+
+def get_dir2lab(ann):
+    id2dir = pd.DataFrame([{
+        "id"  : a['id'],
+        "dir" : get_dir(a)
+    } for a in ann['images']])
+    
+    id2lab = pd.DataFrame([{
+        "id"  : a['id'],
+        "lab" : a['category_id'],
+    } for a in ann['annotations']])
+    
+    dir2lab = pd.merge(id2dir, id2lab)[['dir', 'lab']]
+    dir2lab = {row.dir:row.lab for _, row in dir2lab.iterrows()}
+    return dir2lab
+
+
 
 weight_decays = {
     "aircraft"      : 0.0005,
@@ -48,6 +75,7 @@ def parse_args():
     parser.add_argument('--dataset',    type=str, default='aircraft')
     parser.add_argument('--outpath',    type=str, default='predictions.json')
     parser.add_argument('--model-path', type=str, default='models/aircraft.pth')
+    parser.add_argument('--mode',       type=str, default='test')
     
     parser.add_argument('--seed', default=123, type=int, help='seed')
     
@@ -81,24 +109,38 @@ def predict(model, agent, loader):
 # --
 # Load annotation information
 
-train_ann_path = os.path.join(args.inpath, 'annotations', f'{args.dataset}_train.json')
-test_ann_path  = os.path.join(args.inpath, 'annotations', f'{args.dataset}_test_stripped.json')
+train_ann_path  = os.path.join(args.inpath, 'annotations', f'{args.dataset}_train.json')
+train_ann       = json.load(open(train_ann_path))
 
-train_ann = json.load(open(train_ann_path))
-test_ann  = json.load(open(test_ann_path))
+dir2lab = get_dir2lab(train_ann)
+dir2lab = list(dir2lab.values())
 
-idx2cls = {idx:c['id'] for idx, c in enumerate(train_ann['categories'])}
-img2id  = {os.path.basename(a['file_name']):a['id'] for a in test_ann['images']}
+if args.mode == 'test':
+    target_ann_path = os.path.join(args.inpath, 'annotations', f'{args.dataset}_test_stripped.json')
+    target_ann      = json.load(open(target_ann_path))
+    img2id          = {path_tail(a['file_name'], k=1):a['id'] for a in target_ann['images']}
+elif args.mode == 'valid':
+    target_ann_path = os.path.join(args.inpath, 'annotations', f'{args.dataset}_val.json')
+    target_ann      = json.load(open(target_ann_path))
+    img2id          = {a['file_name']:a['id'] for a in target_ann['images']}
 
 # --
 # Data
 
-test_loader = get_test_data(
-    root=args.inpath,
-    dataset=args.dataset,
-)
+if args.mode == 'test':
+    loader = get_test_data(
+        root=args.inpath,
+        dataset=args.dataset,
+    )
+elif args.mode == 'valid':
+    _, loader = get_data(
+        root=args.inpath,
+        dataset=args.dataset,
+        shuffle_train=False,
+        train_on_valid=True,
+        num_workers=0
+    )
 
-assert len(test_loader.dataset) == len(img2id), 'len(test_loader.dataset) != len(img2id)'
 
 # --
 # Models
@@ -111,14 +153,18 @@ agent = checkpoint['agent']
 _ = model.cuda().eval()
 _ = agent.cuda().eval()
 
-all_preds = predict(model, agent, loader=test_loader)
-filenames = [os.path.basename(p) for p, _ in test_loader.dataset.imgs]
+all_preds = predict(model, agent, loader=loader)
+
+if args.mode == 'test':
+    filenames = [path_tail(p, k=1) for p, _ in loader.dataset.imgs]
+elif args.mode == 'valid':
+    filenames = [path_tail(p, k=5) for p, _ in loader.dataset.imgs]
 
 assert len(filenames) == len(all_preds), 'len(filenames) != len(all_preds)'
 
 for filename, pred in zip(filenames, all_preds):
     print(json.dumps({
         "image_id"    : img2id[filename],
-        "category_id" : idx2cls[int(pred)],
+        "category_id" : dir2lab[int(pred)],
     }))
 
