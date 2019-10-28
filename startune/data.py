@@ -16,7 +16,7 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 
 def get_transform(dataset, means, stds):
-    if dataset in ['gtsrb', 'omniglot','svhn']: 
+    if dataset in ['gtsrb', 'omniglot', 'svhn']: 
         transform_train = transforms.Compose([
             transforms.Resize(72),
             transforms.CenterCrop(72),

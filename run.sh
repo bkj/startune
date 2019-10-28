@@ -58,3 +58,12 @@ python -m startune.predict --dataset aircraft > predictions/aircraft.jl
 
 cat predictions/* | jq --slurp '.' > results.json
 python -m startune.collate_predictions 
+
+# --
+# Regression testing
+
+CUDA_VISIBLE_DEVICES=6 python -m startune.main \
+    --dataset aircraft                         \
+    --seed 888                                 \
+    --outpath models/aircraft.novalid4.pth | tee results/aircraft.novalid4.jl
+

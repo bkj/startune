@@ -23,8 +23,27 @@ from startune.utils import (
     adjust_learning_rate_net, adjust_learning_rate_agent, set_seeds, gumbel_softmax
 )
 
-# torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.deterministic = True
+
+# >>
+import numpy as np
+import random
+
+torch.backends.cudnn.deterministic = True
+torch.set_default_tensor_type('torch.DoubleTensor')
+
+def set_seeds(seed):
+    _ = np.random.seed(seed )
+    _ = torch.manual_seed(seed + 111)
+    _ = torch.cuda.manual_seed(seed + 222)
+    _ = random.seed(seed + 333)
+
+set_seeds(123)
+
+# z = torch.randn(100)
+# print(float(z.sum()))
+# os._exit(0)
+# <<
 
 # --
 # Helpers
@@ -74,7 +93,7 @@ def train(model, agent, loader, model_opt, agent_opt):
     
     total_seen, total_loss, total_correct = 0, 0, 0
     
-    for i, (x, y) in enumerate(loader):
+    for i, (x, y) in tqdm(enumerate(loader), total=len(loader)):
         x, y = x.cuda(), y.cuda()
         
         probs  = agent(x)
@@ -111,7 +130,7 @@ def valid(model, agent, loader):
     total_seen, total_loss, total_correct = 0, 0, 0
     
     with torch.no_grad():
-        for i, (x, y) in enumerate(loader):
+        for i, (x, y) in enumerate(tqdm(loader, total=len(loader))):
             x, y = x.cuda(), y.cuda()
             
             probs  = agent(x)
@@ -148,43 +167,68 @@ n_class = len(valid_loader.dataset.classes)
 # --
 # Models
 
+set_seeds(123)
 model = SimpleStarNet(model=torch.load(args.model_path)['net'], n_class=n_class)
 
+# >>
+p_sum = 0
+for i, p in enumerate(model.parameters()):
+    p_sum += float(p.sum())
+    # print(i, p_sum)
+
+print(p_sum)
+# os._exit(0)
+# <<
+
+set_seeds(456)
 agent = nn.Sequential(
     SimpleResNet(nblocks=[1, 1, 1]),
     nn.Linear(model.out_channels, 24) # !! I think this could be 12 instead of 24
 )
 
-_ = model.cuda()
-_ = agent.cuda()
+print(agent)
 
-model_params = filter(lambda p: p.requires_grad, model.parameters())
-agent_params = agent.parameters()
+# >>
+p_sum, n_params = 0, 0
+for i, p in enumerate(agent.parameters()):
+    p_sum += float(p.sum())
+    n_params += np.prod(p.shape)
+    # print(i, p_sum)
+    
+print(p_sum, n_params)
+os._exit(0)
+# <<
 
-model_opt = torch.optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[args.dataset])
-agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight_decay=0.001)
+# _ = model.cuda()
+# _ = agent.cuda()
 
-# --
-# Train
+# model_params = filter(lambda p: p.requires_grad, model.parameters())
+# agent_params = agent.parameters()
 
+# model_opt = torch.optim.SGD(model_params, lr=args.lr, momentum=0.9, weight_decay=weight_decays[args.dataset])
+# agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight_decay=0.001)
+
+# # --
+# # Train
+
+# # torch.save({"model" : model, "agent" : agent}, args.outpath)
+
+# for epoch in range(args.epochs):
+#     adjust_learning_rate_net(model_opt, epoch, args)
+#     adjust_learning_rate_agent(agent_opt, epoch, args)
+    
+#     train_acc, train_loss = train(model, agent, train_loader, model_opt, agent_opt)
+#     valid_acc, valid_loss = valid(model, agent, valid_loader)
+    
+#     print(json.dumps({
+#         "dataset"    : args.dataset,
+#         "epoch"      : epoch,
+#         "train_acc"  : float(train_acc),
+#         "train_loss" : float(train_loss),
+#         "valid_acc"  : float(valid_acc),
+#         "valid_loss" : float(valid_loss),
+#     }))
+#     sys.stdout.flush()
+
+# print(f'startune.main: saving to {args.outpath}', file=sys.stderr)
 # torch.save({"model" : model, "agent" : agent}, args.outpath)
-
-for epoch in range(args.epochs):
-    adjust_learning_rate_net(model_opt, epoch, args)
-    adjust_learning_rate_agent(agent_opt, epoch, args)
-    
-    train_acc, train_loss = train(model, agent, train_loader, model_opt, agent_opt)
-    valid_acc, valid_loss = valid(model, agent, valid_loader)
-    
-    print(json.dumps({
-        "dataset"    : args.dataset,
-        "epoch"      : epoch,
-        "train_acc"  : float(train_acc),
-        "train_loss" : float(train_loss),
-        "valid_acc"  : float(valid_acc),
-        "valid_loss" : float(valid_loss),
-    }))
-    sys.stdout.flush()
-
-print(f'startune.main: saving to {args.outpath}', file=sys.stderr)
-torch.save({"model" : model, "agent" : agent}, args.outpath)

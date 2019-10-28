@@ -23,7 +23,8 @@ from startune.utils import (
     set_seeds, gumbel_softmax
 )
 
-torch.backends.cudnn.deterministic = True
+raise Exception() # What to do here?
+# torch.backends.cudnn.deterministic = True
 
 # --
 # Helpers
