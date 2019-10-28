@@ -59,7 +59,7 @@ def get_transform(dataset, means, stds):
 def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size=128, num_workers=8):
     
     dict_mean_std = pickle.load(open(os.path.join(root, 'decathlon_mean_std.pickle'), 'rb'), encoding='latin1')
-        
+    
     transform_train, transform_valid = get_transform(
         dataset = dataset, 
         means   = dict_mean_std[dataset + 'mean'],

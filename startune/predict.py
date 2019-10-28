@@ -23,8 +23,7 @@ from startune.utils import (
     set_seeds, gumbel_softmax
 )
 
-raise Exception() # What to do here?
-# torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.deterministic = True
 
 # --
 # Helpers
@@ -98,8 +97,6 @@ test_loader = get_test_data(
     root=args.inpath,
     dataset=args.dataset,
 )
-
-n_class = len(test_loader.dataset.classes)
 
 assert len(test_loader.dataset) == len(img2id), 'len(test_loader.dataset) != len(img2id)'
 

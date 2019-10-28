@@ -39,14 +39,13 @@ rm models.py config_task.py
 # --
 # Run
 
-mkdir -p results
-mkdir -p models
+mkdir -p {models,results}/tov0
 
 for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers; do
     CUDA_VISIBLE_DEVICES=6 python -m startune.main \
         --dataset $dataset                         \
-        --outpath models/$dataset.pth              \
-        --train-on-valid | tee results/$dataset.jl
+        --outpath models/tov0/$dataset.pth         \
+        --train-on-valid | tee results/tov0/$dataset.jl
 done
 
 # --
@@ -65,5 +64,5 @@ python -m startune.collate_predictions
 CUDA_VISIBLE_DEVICES=6 python -m startune.main \
     --dataset aircraft                         \
     --seed 888                                 \
-    --outpath models/aircraft.novalid4.pth | tee results/aircraft.novalid4.jl
+    --outpath models/aircraft.novalid5.pth | tee results/aircraft.novalid5.jl
 
