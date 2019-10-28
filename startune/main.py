@@ -74,7 +74,7 @@ def train(model, agent, loader, model_opt, agent_opt):
     
     total_seen, total_loss, total_correct = 0, 0, 0
     
-    for i, (x, y) in enumerate(loader):
+    for i, (x, y) in enumerate(tqdm(loader, total=len(loader))):
         x, y = x.cuda(), y.cuda()
         
         probs  = agent(x)
@@ -111,7 +111,7 @@ def valid(model, agent, loader):
     total_seen, total_loss, total_correct = 0, 0, 0
     
     with torch.no_grad():
-        for i, (x, y) in enumerate(loader):
+        for i, (x, y) in enumerate(tqdm(loader, total=len(loader))):
             x, y = x.cuda(), y.cuda()
             
             probs  = agent(x)

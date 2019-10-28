@@ -54,15 +54,5 @@ done
 mkdir -p predictions
 
 python -m startune.predict --dataset aircraft --mode test > predictions/aircraft.test.jl
-python -m startune.predict --dataset aircraft --mode valid > predictions/aircraft.valid.jl
 
 cat predictions/aircraft.test.jl | jq --slurp '.' > results.json
-
-# --
-# Regression testing
-
-CUDA_VISIBLE_DEVICES=6 python -m startune.main \
-    --dataset aircraft                         \
-    --seed 888                                 \
-    --outpath models/aircraft.novalid5.pth | tee results/aircraft.novalid5.jl
-
