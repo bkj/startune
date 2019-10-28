@@ -56,4 +56,5 @@ mkdir -p predictions
 
 python -m startune.predict --dataset aircraft > predictions/aircraft.jl
 
+cat predictions/* | jq --slurp '.' > results.json
 python -m startune.collate_predictions 
