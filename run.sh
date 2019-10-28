@@ -56,7 +56,7 @@ mkdir -p predictions
 python -m startune.predict --dataset aircraft --mode test > predictions/aircraft.test.jl
 python -m startune.predict --dataset aircraft --mode valid > predictions/aircraft.valid.jl
 
-cat predictions/aircraft.valid.jl | jq --slurp '.' > results.json
+cat predictions/aircraft.test.jl | jq --slurp '.' > results.json
 
 # --
 # Regression testing
