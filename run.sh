@@ -42,9 +42,18 @@ rm models.py config_task.py
 mkdir -p results
 mkdir -p models
 
-for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers imagenet12; do
+for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers; do
     CUDA_VISIBLE_DEVICES=6 python -m startune.main \
         --dataset $dataset                         \
         --outpath models/$dataset.pth              \
         --train-on-valid | tee results/$dataset.jl
 done
+
+# --
+# Inspect
+
+mkdir -p predictions
+
+python -m startune.predict --dataset aircraft > predictions/aircraft.jl
+
+python -m startune.collate_predictions 

@@ -38,7 +38,7 @@ weight_decays = {
     "svhn"          : 0.0,
     "ucf101"        : 0.0005,
     "vgg-flowers"   : 0.0001,
-    "imagenet12"    : 0.0001,
+    # "imagenet12"    : 0.0001,
 }
 
 def parse_args():
@@ -166,7 +166,7 @@ agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight
 # --
 # Train
 
-torch.save(model, args.outpath)
+# torch.save({"model" : model, "agent" : agent}, args.outpath)
 
 for epoch in range(args.epochs):
     adjust_learning_rate_net(model_opt, epoch, args)
@@ -185,4 +185,5 @@ for epoch in range(args.epochs):
     }))
     sys.stdout.flush()
 
-torch.save(model, args.outpath)
+print(f'startune.main: saving to {args.outpath}', file=sys.stderr)
+torch.save({"model" : model, "agent" : agent}, args.outpath)

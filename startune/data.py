@@ -6,6 +6,7 @@
 
 import os
 import pickle
+import shutil
 import numpy as np
 
 import torch
@@ -57,7 +58,7 @@ def get_transform(dataset, means, stds):
 
 def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size=128, num_workers=8):
     
-    dict_mean_std = pickle.load(open(root + 'decathlon_mean_std.pickle', 'rb'), encoding='latin1')
+    dict_mean_std = pickle.load(open(os.path.join(root, 'decathlon_mean_std.pickle'), 'rb'), encoding='latin1')
         
     transform_train, transform_valid = get_transform(
         dataset = dataset, 
@@ -94,4 +95,43 @@ def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size
     
     return train_loader, valid_loader
 
+
+def _flat_ImageFolder(root=None, tmp_dir='/tmp/startune_tmp', **kwargs):
+    """ Silly wrapper so we can pass a flat directory of images for inference """
+    tmp_path = os.path.join(tmp_dir, 'tmp')
+    
+    if os.path.exists(tmp_dir):
+        shutil.rmtree(tmp_dir)
+    
+    os.makedirs(tmp_dir)
+    
+    if os.path.exists(tmp_path):
+        os.unlink(tmp_path)
+    
+    os.symlink(os.path.abspath(root), tmp_path)
+    
+    return ImageFolder(root=tmp_dir, **kwargs)
+
+
+def get_test_data(root, dataset, batch_size=128):
+    
+    dict_mean_std = pickle.load(open(os.path.join(root, 'decathlon_mean_std.pickle'), 'rb'), encoding='latin1')
+    
+    _, transform_test = get_transform(
+        dataset = dataset, 
+        means   = dict_mean_std[dataset + 'mean'],
+        stds    = dict_mean_std[dataset + 'std'],
+    )
+    
+    test_path    = os.path.join(root, 'data', dataset, 'test')
+    test_dataset = _flat_ImageFolder(root=test_path, transform=transform_test)
+    
+    test_loader = DataLoader(
+        test_dataset,
+        shuffle     = False,
+        batch_size  = batch_size,
+        num_workers = 0,
+    )
+    
+    return test_loader
 

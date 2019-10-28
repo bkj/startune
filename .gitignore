@@ -6,3 +6,4 @@ cv/*
 __pycache__
 results/*
 models/*
+predictions/*
