@@ -10,17 +10,17 @@ See `./run.sh` for details
 
 ```
 error_rates_on_decathlon_test_set = {
-    "aircraft"      : 0.337833783378,
+    "aircraft"      : 0.3378,
     "cifar100"      : 0.2013,
-    "daimlerpedcls" : 0.0268367346939,
-    "dtd"           : 0.425,
-    "gtsrb"         : 0.00736342042755,
-    "omniglot"      : 0.106223043746,
-    "svhn"          : 0.0359557467732,
-    "ucf101"        : 0.480306634946,
-    "vgg-flowers"   : 0.13189136445,
+    "daimlerpedcls" : 0.0268,
+    "dtd"           : 0.4250,
+    "gtsrb"         : 0.0073,
+    "omniglot"      : 0.1062,
+    "svhn"          : 0.0359,
+    "ucf101"        : 0.4803,
+    "vgg-flowers"   : 0.1318,
     
-    "imagenet12"    : 1.0,              # Didn't run base model on ImageNet
-                                        # From paper, error would be 0.3968
+    "imagenet12"    : 1.0000, # Didn't run base model on ImageNet
+                              # From paper, error would be 0.3968
 }
 ```
