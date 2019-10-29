@@ -9,7 +9,7 @@ See `./run.sh` for details
 ## Results
 
 ```
-error_rates = {
+error_rates_on_decathlon_test_set = {
     "aircraft"      : 0.337833783378,
     "cifar100"      : 0.2013,
     "daimlerpedcls" : 0.0268367346939,
