@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument('--epochs',   type=int,   default=110)
     parser.add_argument('--lr',       type=float, default=0.1)
     parser.add_argument('--lr-agent', type=float, default=0.01)
+    parser.add_argument('--valid-interval', type=int, default=1)
     
     parser.add_argument('--train-on-valid', action="store_true")
     
@@ -171,12 +172,17 @@ agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight
 # torch.save({"model" : model, "agent" : agent}, args.outpath)
 
 t = time()
+
+valid_acc, valid_loss = -1, -1
+
 for epoch in range(args.epochs):
     adjust_learning_rate_net(model_opt, epoch, args)
     adjust_learning_rate_agent(agent_opt, epoch, args)
     
     train_acc, train_loss = train(model, agent, train_loader, model_opt, agent_opt)
-    valid_acc, valid_loss = valid(model, agent, valid_loader)
+    
+    if not epoch % args.valid_interval:
+        valid_acc, valid_loss = valid(model, agent, valid_loader)
     
     print(json.dumps({
         "dataset"    : args.dataset,

@@ -43,9 +43,10 @@ mkdir -p {models,results}/tov1
 
 for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers; do
     CUDA_VISIBLE_DEVICES=6 python -m startune.main \
-        --dataset $dataset                         \
-        --outpath models/tov1/$dataset.pth         \
-        --train-on-valid | tee results/tov1/$dataset.jl
+        --dataset         $dataset                 \
+        --outpath         models/tov1/$dataset.pth \
+        --valid-interval  5                        \
+        --train-on-valid                           | tee results/tov1/$dataset.jl
 done
 
 # --
