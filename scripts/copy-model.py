@@ -6,7 +6,7 @@
 
 import torch
 from torch import nn
-from startune.models import SimpleResNet
+from startune.models import ResNet as __ResNet
 from startune.dep.models import ResNet, config_task
 
 import sys; sys.path.append('dep')
@@ -35,7 +35,7 @@ def assign_modules(old_modules, new_modules):
 
 source  = 'models/resnet26_pretrained.t7'
 net_old = torch.load(source, encoding='latin1')['net']
-net_new = SimpleResNet()
+net_new = __ResNet()
 
 net_old = net_old.cpu().eval()
 net_new = net_new.cpu().eval()
@@ -68,4 +68,4 @@ assign_modules(old_bn, new_bn)
 # b = net(x)
 # (a == b).all()
 
-torch.save({'net' : net_new}, 'models/SimpleResNet.t7')
+torch.save({'net' : net_new}, 'models/ResNet.t7')

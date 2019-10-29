@@ -23,4 +23,19 @@ error_rates_on_decathlon_test_set = {
     "imagenet12"    : 1.0000, # Didn't run base model on ImageNet
                               # From paper, error would be 0.3968
 }
+
+accs_on_decathlon_test_set = {k:1 - v for k,v in error_rates_on_decathlon_test_set.items()}
+accs_on_decathlon_test_set
 ```
+
+## Improvements
+
+- Data augmentation
+- Better learning rate scheduler
+- Better optimizer
+- Initialization
+- fast.ai tricks?
+- fix scaling
+- ranger
+- MISH?
+- FP16? Multi-GPU?

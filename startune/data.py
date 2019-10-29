@@ -84,6 +84,7 @@ def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size
         shuffle     = shuffle_train,
         batch_size  = batch_size,
         num_workers = num_workers,
+        pin_memory  = True,
     )
     
     valid_loader = DataLoader(
@@ -93,7 +94,8 @@ def get_data(root, dataset, train_on_valid=False, shuffle_train=True, batch_size
         num_workers = num_workers,
     )
     
-    return train_loader, valid_loader
+    n_class = len(valid_loader.dataset.classes)
+    return train_loader, list(valid_loader), n_class
 
 
 def _flat_ImageFolder(root=None, tmp_dir='/tmp/startune_tmp', **kwargs):

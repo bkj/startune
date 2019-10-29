@@ -4,6 +4,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from startune.utils import gumbel_softmax
+
 class Identity(nn.Module):
     def forward(self, x): return x
 
@@ -57,7 +59,7 @@ class BasicBlock(nn.Module):
         return 'BasicBlock()'
 
 
-class SimpleResNet(nn.Module):
+class ResNet(nn.Module):
     def __init__(self, width=32, nblocks=[4, 4, 4, 4]):
         super().__init__()
         
@@ -94,14 +96,14 @@ class SimpleResNet(nn.Module):
         return x
 
 
-class SimpleStarNet(nn.Module):
+class TwoPathModel(nn.Module):
     def __init__(self, model, n_class):
         super().__init__()
         
         self.stem   = model.stem
         self.trunk  = model.trunk
         self.head   = model.head
-        self.linear = nn.Linear(256, n_class)
+        self.linear = nn.Linear(model.out_channels, n_class)
         
         self.ftrunk = deepcopy(model.trunk)
         for m in self.ftrunk.modules():
@@ -110,24 +112,50 @@ class SimpleStarNet(nn.Module):
         
         self.out_channels = model.out_channels
     
-    def forward(self, x, policy=None):
+    def straight_forward(self, x):
+        x = self.stem(x)
+        x = self.trunk(x)
+        x = self.head(x)
+        x = self.linear(x)
+        return x
+    
+    def forward(self, x, policy):
+        
         trunk  = list(self.trunk)
         ftrunk = list(self.ftrunk)
         
         x = self.stem(x)
         
         offset = 0
-        if policy is not None:
-            for layer, flayer in zip(trunk, ftrunk):
-                for block, fblock in zip(layer, flayer):
-                    
-                    action = policy[:, offset].contiguous()
-                    action = action.float().view(-1, 1, 1, 1)
-                    
-                    x = ((1 - action) * fblock(x)) + (action * block(x))
-                    offset += 1
+        for layer, flayer in zip(trunk, ftrunk):
+            for block, fblock in zip(layer, flayer):
+                
+                action = policy[:, offset].contiguous()
+                action = action.float().view(-1, 1, 1, 1)
+                
+                x = ((1 - action) * fblock(x)) + (action * block(x))
+                
+                offset += 1
         
         x = self.head(x)
         x = self.linear(x)
         
         return x
+
+
+class StarTuneWrapper(nn.Module):
+    def __init__(self, twopath, agent):
+        super().__init__()
+        
+        self.twopath = twopath
+        self.agent   = agent
+    
+    def forward(self, x, straight=False):
+        if straight:
+            return self.twopath.straight_forward(x)
+        else:
+            probs  = self.agent(x)
+            action = gumbel_softmax(probs.view(probs.shape[0], -1, 2))
+            policy = action[:,:,1]
+            
+            return self.twopath(x, policy=policy)

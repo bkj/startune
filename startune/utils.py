@@ -18,36 +18,6 @@ def set_seeds(seed):
     _ = random.seed(seed + 333)
 
 
-def adjust_learning_rate_net(optimizer, epoch, args):
-    
-    if epoch >= args.step3:
-        lr = args.lr * 0.001
-    if epoch >= args.step2:
-        lr = args.lr * 0.01
-    if epoch >= args.step1:
-        lr = args.lr * 0.1
-    else:
-        lr = args.lr
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-
-def adjust_learning_rate_agent(optimizer, epoch, args):
-    
-    if epoch >= args.step3:
-        lr = args.lr_agent * 0.001
-    if epoch >= args.step2:
-        lr = args.lr_agent * 0.01
-    if epoch >= args.step1:
-        lr = args.lr_agent * 0.1
-    else:
-        lr = args.lr_agent
-        
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-
 def sample_gumbel(shape, eps=1e-20):
     U = torch.cuda.FloatTensor(shape).uniform_()
     return -1 * torch.log(-torch.log(U + eps) + eps)
