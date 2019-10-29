@@ -39,13 +39,13 @@ rm models.py config_task.py
 # --
 # Run
 
-mkdir -p {models,results}/tov0
+mkdir -p {models,results}/tov1
 
 for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers; do
     CUDA_VISIBLE_DEVICES=6 python -m startune.main \
         --dataset $dataset                         \
-        --outpath models/tov0/$dataset.pth         \
-        --train-on-valid | tee results/tov0/$dataset.jl
+        --outpath models/tov1/$dataset.pth         \
+        --train-on-valid | tee results/tov1/$dataset.jl
 done
 
 # --

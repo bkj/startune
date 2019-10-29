@@ -10,6 +10,7 @@ import json
 import argparse
 import collections
 import numpy as np
+from time import time
 from tqdm import tqdm
 
 import torch
@@ -169,6 +170,7 @@ agent_opt = torch.optim.SGD(agent_params, lr=args.lr_agent, momentum=0.9, weight
 
 # torch.save({"model" : model, "agent" : agent}, args.outpath)
 
+t = time()
 for epoch in range(args.epochs):
     adjust_learning_rate_net(model_opt, epoch, args)
     adjust_learning_rate_agent(agent_opt, epoch, args)
@@ -183,6 +185,7 @@ for epoch in range(args.epochs):
         "train_loss" : float(train_loss),
         "valid_acc"  : float(valid_acc),
         "valid_loss" : float(valid_loss),
+        "elapsed"    : float(time() - t),
     }))
     sys.stdout.flush()
 
