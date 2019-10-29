@@ -73,8 +73,7 @@ def parse_args():
     
     parser.add_argument('--inpath',     type=str, default='./data/decathlon-1.0/')
     parser.add_argument('--dataset',    type=str, default='aircraft')
-    parser.add_argument('--outpath',    type=str, default='predictions.json')
-    parser.add_argument('--model-path', type=str, default='models/aircraft.pth')
+    parser.add_argument('--model',      type=str, default='models/aircraft.pth')
     parser.add_argument('--mode',       type=str, default='test')
     
     parser.add_argument('--seed', default=123, type=int, help='seed')
@@ -141,11 +140,15 @@ elif args.mode == 'valid':
         num_workers=0
     )
 
+if args.mode == 'test':
+    filenames = [path_tail(p, k=1) for p, _ in loader.dataset.imgs]
+elif args.mode == 'valid':
+    filenames = [path_tail(p, k=5) for p, _ in loader.dataset.imgs]
 
 # --
 # Models
 
-checkpoint = torch.load(args.model_path, map_location=lambda *x: x[0])
+checkpoint = torch.load(args.model, map_location=lambda *x: x[0])
 
 model = checkpoint['model']
 agent = checkpoint['agent']
@@ -154,13 +157,6 @@ _ = model.cuda().eval()
 _ = agent.cuda().eval()
 
 all_preds = predict(model, agent, loader=loader)
-
-if args.mode == 'test':
-    filenames = [path_tail(p, k=1) for p, _ in loader.dataset.imgs]
-elif args.mode == 'valid':
-    filenames = [path_tail(p, k=5) for p, _ in loader.dataset.imgs]
-
-assert len(filenames) == len(all_preds), 'len(filenames) != len(all_preds)'
 
 for filename, pred in zip(filenames, all_preds):
     print(json.dumps({

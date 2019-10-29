@@ -52,8 +52,14 @@ done
 # --
 # Inspect
 
-mkdir -p predictions
+mkdir -p predictions/tov1/{valid,test}
 
-python -m startune.predict --dataset aircraft --mode test > predictions/aircraft.test.jl
+# for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn ucf101 vgg-flowers; do
+for dataset in aircraft cifar100 daimlerpedcls dtd gtsrb omniglot svhn; do
+    CUDA_VISIBLE_DEVICES=5 python -m startune.predict \
+        --dataset $dataset                            \
+        --mode    test                                \
+        --model   models/tov1/$dataset.pth > predictions/tov1/test/$dataset.jl
+done
 
-cat predictions/aircraft.test.jl | jq --slurp '.' > results.json
+cat predictions/test/*.jl | jq --slurp '.' > predictions/tov1/test/results.json
