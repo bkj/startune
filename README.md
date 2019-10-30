@@ -9,7 +9,7 @@ See `./run.sh` for details
 ## Results
 
 ```
-error_rates_on_decathlon_test_set = {
+spottune_error_on_decathlon_test_set = {
     "aircraft"      : 0.3378,
     "cifar100"      : 0.2013,
     "daimlerpedcls" : 0.0268,
@@ -20,13 +20,25 @@ error_rates_on_decathlon_test_set = {
     "ucf101"        : 0.4803,
     "vgg-flowers"   : 0.1318,
     
-    "imagenet12"    : 1.0000, # Didn't run base model on ImageNet
-                              # From paper, error would be 0.3968
+    "imagenet12"    : 0.3968, # !! From paper
 }
 
-accs_on_decathlon_test_set = {k:1 - v for k,v in error_rates_on_decathlon_test_set.items()}
-accs_on_decathlon_test_set
+finetune_error_on_decathlon_test_set = {
+    "aircraft"      : 0.340,
+    "cifar100"      : 0.210,
+    "daimlerpedcls" : 0.032,
+    "dtd"           : 0.479,
+    "gtsrb"         : 0.008,    
+    "omniglot"      : 0.108,
+    "svhn"          : XXXXX, # !! Too impatient to wait to finish
+    "ucf101"        : 0.484,
+    "vgg-flowers"   : 0.145,
+    
+    "imagenet12"    : 0.396, # !! From paper
+}
 ```
+
+`spottune` is _slightly_ better than standard `finetune` on these datasets.
 
 ## Improvements
 

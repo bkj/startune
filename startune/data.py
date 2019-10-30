@@ -115,7 +115,7 @@ def _flat_ImageFolder(root=None, tmp_dir='/tmp/startune_tmp', **kwargs):
     return ImageFolder(root=tmp_dir, **kwargs)
 
 
-def get_test_data(root, dataset, batch_size=256):
+def get_test_data(root, dataset, batch_size=512):
     
     dict_mean_std = pickle.load(open(os.path.join(root, 'decathlon_mean_std.pickle'), 'rb'), encoding='latin1')
     

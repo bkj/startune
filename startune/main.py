@@ -133,10 +133,6 @@ model = StarTuneWrapper(
 
 _ = model.cuda()
 
-# >>
-# model = torch.nn.DataParallel(model)
-# <<
-
 model_params = [p for k,p in model.named_parameters() if (('twopath.' in k) and (p.requires_grad))]
 agent_params = [p for k,p in model.named_parameters() if (('agent.' in k) and (p.requires_grad))]
 
@@ -186,9 +182,6 @@ for epoch in range(args.epochs):
     agent_sched.step()
 
 
-print(f'startune.main: saving to {args.outpath}', file=sys.stderr)
+print(f'startune.main: saving to {args.outpath}.pth', file=sys.stderr)
 
-# if hasattr(model, 'module'):
-#     model = model.module
-
-torch.save(model, args.outpath)
+torch.save(model, f'{args.outpath}.pth')

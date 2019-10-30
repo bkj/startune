@@ -20,7 +20,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from startune.data import get_test_data, get_data
-from startune.models import SimpleResNet, SimpleStarNet
 
 from startune.utils import (
     set_seeds, gumbel_softmax
@@ -34,14 +33,11 @@ torch.backends.cudnn.deterministic = True
 def path_tail(p, k=1):
     return '/'.join(p.split('/')[-k:])
 
-def get_dir(a):
-    p = a['file_name']
-    return os.path.basename(os.path.dirname(p))
 
 def get_dir2lab(ann):
     id2dir = pd.DataFrame([{
         "id"  : a['id'],
-        "dir" : get_dir(a)
+        "dir" : os.path.basename(os.path.dirname(a['file_name'])),
     } for a in ann['images']])
     
     id2lab = pd.DataFrame([{
@@ -52,7 +48,6 @@ def get_dir2lab(ann):
     dir2lab = pd.merge(id2dir, id2lab)[['dir', 'lab']]
     dir2lab = {row.dir:row.lab for _, row in dir2lab.iterrows()}
     return dir2lab
-
 
 
 weight_decays = {
@@ -76,7 +71,8 @@ def parse_args():
     parser.add_argument('--model',      type=str, default='models/aircraft.pth')
     parser.add_argument('--mode',       type=str, default='test')
     
-    parser.add_argument('--seed', default=123, type=int, help='seed')
+    parser.add_argument('--straight', action="store_true")
+    parser.add_argument('--seed', default=123, type=int)
     
     return parser.parse_args()
 
@@ -85,9 +81,8 @@ args = parse_args()
 set_seeds(args.seed)
 
 
-def predict(model, agent, loader):
+def predict(model, loader, straight):
     _ = model.eval()
-    _ = agent.eval()
     
     all_preds = []
     
@@ -95,13 +90,9 @@ def predict(model, agent, loader):
         for i, (x, _) in enumerate(tqdm(loader, total=len(loader))):
             x = x.cuda()
             
-            probs  = agent(x)
-            action = gumbel_softmax(probs.view(probs.shape[0], -1, 2))
-            policy = action[:,:,1]
-            
-            out   = model(x, policy)
-            preds = torch.argmax(out.data, dim=-1)
-            all_preds.append(preds.detach().cpu())
+            preds = model(x, straight=straight).argmax(dim=-1)
+            preds = preds.detach().cpu()
+            all_preds.append(preds)
     
     return torch.cat(all_preds)
 
@@ -148,15 +139,14 @@ elif args.mode == 'valid':
 # --
 # Models
 
-checkpoint = torch.load(args.model, map_location=lambda *x: x[0])
+model = torch.load(args.model, map_location=lambda *x: x[0])
+# >>
+model = nn.DataParallel(model)
+# <<
 
-model = checkpoint['model']
-agent = checkpoint['agent']
+_ = model.eval().cuda()
 
-_ = model.cuda().eval()
-_ = agent.cuda().eval()
-
-all_preds = predict(model, agent, loader=loader)
+all_preds = predict(model, loader=loader, straight=args.straight)
 
 for filename, pred in zip(filenames, all_preds):
     print(json.dumps({
