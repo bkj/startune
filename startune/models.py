@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from startune.utils import gumbel_softmax
+# from startune.utils import gumbel_softmax, one_hot_argmax
 
 class Identity(nn.Module):
     def forward(self, x): return x
@@ -150,12 +150,13 @@ class StarTuneWrapper(nn.Module):
         self.twopath = twopath
         self.agent   = agent
     
-    def forward(self, x, straight=False):
+    def forward(self, x, straight=False, greedy=False, return_policy=False):
         if straight:
             return self.twopath.straight_forward(x)
         else:
-            probs  = self.agent(x)
-            action = gumbel_softmax(probs.view(probs.shape[0], -1, 2))
-            policy = action[:,:,1]
+            policy = self.agent(x).sigmoid()
             
-            return self.twopath(x, policy=policy)
+            if return_policy:
+                return policy
+            else:
+                return self.twopath(x, policy=policy)

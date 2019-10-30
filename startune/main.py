@@ -44,13 +44,13 @@ weight_decays = {
     # "imagenet12"    : 0.0001,
 }
 
-def do_epoch(model, loader, model_opt=None, agent_opt=None, straight=False):
+def do_epoch(model, loader, model_opt=None, agent_opt=None, straight=False, greedy=False):
     total_seen, total_loss, total_correct = 0, 0, 0
     
     for i, (x, y) in enumerate(tqdm(loader, total=len(loader))):
         x, y = x.cuda(), y.cuda()
         
-        out  = model(x, straight=straight)
+        out  = model(x, straight=straight, greedy=greedy)
         
         loss = F.cross_entropy(out, y)
         
@@ -92,6 +92,7 @@ def parse_args():
     
     parser.add_argument('--train-on-valid', action="store_true")
     parser.add_argument('--straight',       action="store_true")
+    parser.add_argument('--greedy',         action="store_true")
     
     parser.add_argument('--lr-sched',      default='step', type=str)
     parser.add_argument('--lr-milestones', default='40,60,80', type=str)
@@ -127,11 +128,15 @@ model = StarTuneWrapper(
     twopath=TwoPathModel(model=pretrained, n_class=n_class),
     agent=nn.Sequential(
         ResNet(nblocks=[1, 1, 1]),
-        nn.Linear(pretrained.out_channels, 24) # !! I think this could be 12 instead of 24
+        nn.Linear(pretrained.out_channels, 12)
     ),
 )
 
 _ = model.cuda()
+
+# >>
+# model = nn.DataParallel(model)
+# <<
 
 model_params = [p for k,p in model.named_parameters() if (('twopath.' in k) and (p.requires_grad))]
 agent_params = [p for k,p in model.named_parameters() if (('agent.' in k) and (p.requires_grad))]
@@ -161,11 +166,13 @@ valid_acc, valid_loss = -1, -1
 for epoch in range(args.epochs):
     
     _ = model.train()
-    train_acc, train_loss = do_epoch(model, train_loader, model_opt=model_opt, agent_opt=agent_opt, straight=args.straight)
+    train_acc, train_loss = do_epoch(model, train_loader, model_opt=model_opt, agent_opt=agent_opt, 
+        straight=args.straight, greedy=args.greedy)
     
     if (not epoch % args.valid_interval) or (epoch == args.epochs - 1):
         _ = model.eval()
-        valid_acc, valid_loss = do_epoch(model, valid_loader, straight=args.straight)
+        valid_acc, valid_loss = do_epoch(model, valid_loader, 
+            straight=args.straight, greedy=args.greedy)
     
     print(json.dumps({
         "dataset"    : args.dataset,

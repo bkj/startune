@@ -22,16 +22,17 @@ def sample_gumbel(shape, eps=1e-20):
     U = torch.cuda.FloatTensor(shape).uniform_()
     return -1 * torch.log(-torch.log(U + eps) + eps)
 
-def gumbel_softmax_sample(logits, temperature):
-    y = logits + sample_gumbel(logits.size())
-    return F.softmax(y / temperature, dim=-1)
-
-def gumbel_softmax(logits, temperature=5):
-    y      = gumbel_softmax_sample(logits, temperature)
-    
+def one_hot_argmax(y):
     shape  = y.size()
     _, ind = y.max(dim=-1)
-    y_hard = torch.zeros_like(y).view(-1, shape[-1])
-    y_hard.scatter_(1, ind.view(-1, 1), 1)
-    y_hard = y_hard.view(*shape)
+    one_hot = torch.zeros_like(y).view(-1, shape[-1])
+    one_hot.scatter_(1, ind.view(-1, 1), 1)
+    one_hot = one_hot.view(*shape)
+    return one_hot
+
+def gumbel_softmax(logits, temperature=5):
+    y = logits + sample_gumbel(logits.size())
+    y = F.softmax(y / temperature, dim=-1)
+    
+    y_hard = one_hot_argmax(y)
     return (y_hard - y).detach() + y
