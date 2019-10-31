@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+"""
+    startune/models.py
+"""
+
+import math
 from copy import deepcopy
 
 import torch
@@ -14,7 +21,7 @@ class Flatten(nn.Module):
         return x.view(x.size(0), -1)
 
 class ConvBN(nn.Module):
-    def __init__(self, in_channels, out_channels, stride, act_fn=Identity()):
+    def __init__(self, in_channels, out_channels, stride, dropout=0.0, act_fn=Identity()):
         super().__init__()
         
         self.conv = nn.Conv2d(
@@ -26,11 +33,19 @@ class ConvBN(nn.Module):
             bias=False
         )
         
-        self.bn     = nn.BatchNorm2d(out_channels)
-        self.act_fn = act_fn
+        # self.dropout = nn.Dropout2d(dropout)
+        self.bn      = nn.BatchNorm2d(out_channels)
+        self.act_fn  = act_fn
     
     def forward(self, x):
-        return self.act_fn(self.bn(self.conv(x)))
+        x = self.conv(x)
+        
+        # if self.dropout is not None:
+        #     x = self.dropout(x)
+        
+        x = self.bn(x)
+        x = self.act_fn(x)
+        return x
 
 
 class BasicBlock(nn.Module):
@@ -60,7 +75,7 @@ class BasicBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, width=32, nblocks=[4, 4, 4, 4]):
+    def __init__(self, width=32, nblocks=[4, 4, 4]):
         super().__init__()
         
         self.stem = ConvBN(3, width, stride=1)
@@ -79,6 +94,14 @@ class ResNet(nn.Module):
         )
         
         self.out_channels = 8 * width
+        
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
     
     def _make_layer(self, in_channels, out_channels, nblocks):
         layers = [

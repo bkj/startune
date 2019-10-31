@@ -1,4 +1,6 @@
+*pth
 .DS*
+data
 data/*
 cv/*
 *.pyc
